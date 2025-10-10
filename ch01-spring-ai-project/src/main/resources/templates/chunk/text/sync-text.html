@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="container mt-4">
+        <h2>Server-Sent Events (SSE) Demo</h2>
+        <p>AI가 생성하는 답변을 실시간으로 받아옵니다.</p>
+        <button id="startSseStream" class="btn btn-primary">AI 답변 스트리밍 시작</button>
+        <div id="sse-result" class="mt-3 p-3 border rounded" style="min-height: 100px; background-color: #f8f9fa;">
+            <!-- 여기에 AI 답변이 표시됩니다. -->
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const startSseButton = document.getElementById('startSseStream');
+    const sseResultDiv = document.getElementById('sse-result');
+    let eventSource;
+
+    startSseButton.addEventListener('click', function() {
+        // 이전 EventSource가 있다면 닫기
+        if (eventSource) {
+            eventSource.close();
+        }
+
+        sseResultDiv.innerHTML = ''; // 결과 영역 초기화
+        startSseButton.disabled = true; // 버튼 비활성화
+
+        // 1. EventSource 객체 생성 및 서버 연결
+        eventSource = new EventSource('/chunk/text/sync-ai-response');
+
+        // 2. 'message' 이벤트 핸들러 (기본 이벤트)
+        // 서버에서 event: 를 지정하지 않은 모든 data: 는 message 이벤트로 수신됩니다.
+        eventSource.onmessage = function(event) {
+            // event.data에는 서버가 보낸 단어가 들어있습니다.
+            // 공백을 추가하여 단어를 구분합니다.
+            console.log("Stream Received SSE:", event);
+            sseResultDiv.innerHTML += event.data + ' ';
+        };
+
+        // 3. 'completion' 커스텀 이벤트 핸들러
+        // 서버에서 "event: completion"으로 보낸 이벤트를 수신합니다.
+        eventSource.addEventListener('completion', function(event) {
+            console.log('Stream completed:', event.data);
+
+            // 4. 스트림이 완료되면 연결을 닫습니다.
+            eventSource.close();
+            startSseButton.disabled = false; // 버튼 다시 활성화
+            sseResultDiv.innerHTML += '<br><br><strong>[스트림 완료]</strong>';
+        });
+
+        // 5. 에러 핸들러
+        eventSource.onerror = function(err) {
+            console.error("EventSource failed:", err);
+            sseResultDiv.innerHTML += '<br><strong style="color: red;">[연결 오류발생]</strong>';
+            eventSource.close();
+            startSseButton.disabled = false; // 오류 발생 시 버튼 활성화
+        };
+    });
+});
+</script>
+</body>
+</html>

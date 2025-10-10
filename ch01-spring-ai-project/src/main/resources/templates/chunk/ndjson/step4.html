@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>NDJSON Stream Demo</h2>
+        <p>사용자 목록을 NDJSON 스트림으로 받아옵니다.</p>
+        <button id="startNdjsonStream" class="btn btn-success">사용자 목록 스트리밍 시작</button>
+        <ul id="ndjson-result" class="list-group mt-3">
+            <!-- 여기에 사용자 목록이 li 형태로 추가됩니다. -->
+        </ul>
+    </div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    const startNdjsonButton = document.getElementById('startNdjsonStream');
+    const ndjsonResultUl = document.getElementById('ndjson-result');
+
+    startNdjsonButton.addEventListener('click', async function() {
+        ndjsonResultUl.innerHTML = ''; // 결과 영역 초기화
+        startNdjsonButton.disabled = true;
+
+        try {
+            // 1. fetch API로 스트림 요청
+            const response = await fetch('/chunk/ndjson/users');
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            // 2. 스트림을 계속해서 읽는 루프
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) {
+                    // 스트림이 끝나면 루프 종료
+                    ndjsonResultUl.innerHTML += '<li class="list-group-itemlist-group-item-info"><strong>[스트림 완료]</strong></li>';
+                    break;
+                }
+
+                // 3. 청크를 디코딩하고 버퍼에 추가
+                buffer += decoder.decode(value, { stream: true });
+
+                // 4. 버퍼에서 줄바꿈(\n)을 기준으로 데이터 처리
+                const lines = buffer.split('\n');
+
+                // 마지막 라인은 완전하지 않을 수 있으므로 버퍼에 남겨둡니다.
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (line.trim() === '') continue;
+                    try {
+                        // 5. 각 라인을 JSON으로 파싱
+                        const user = JSON.parse(line);
+
+                        // 6. 파싱된 객체를 화면에 표시
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item';
+                        li.textContent = `ID: ${user.id}, Name: ${user.name}, Email: ${user.email}`;
+                        ndjsonResultUl.appendChild(li);
+                    } catch (e) {
+                        console.error('Invalid JSON line:', line, e);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Fetch stream failed:', error);
+            ndjsonResultUl.innerHTML += '<li class="list-group-item list-group-item-danger"><strong>[연결 오류 발생]</strong></li>';
+        } finally {
+            startNdjsonButton.disabled = false;
+        }
+    });
+});
+
+</script>
+</body>
+</html>

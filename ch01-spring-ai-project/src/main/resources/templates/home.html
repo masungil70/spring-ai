@@ -8,6 +8,41 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
     <link href="/css/springai.css" rel="stylesheet" />
     <script src="/js/springai.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        //이벤트 핸들러 설정
+        document.querySelector("#inputPanel .btn-primary").addEventListener("click", function(event) {
+        event.preventDefault();
+        handleSubmit();
+        });
+    });
+
+    // ##### 제출 버튼을 클릭했을 때 실행하는 함수 #####
+    async function handleSubmit() {
+      try {
+        // 텍스트 질문을 얻고 대화 패널에 추가하기
+        const question = document.getElementById("question").value;
+        if (question === "") return;
+
+        // AJAX 요청하고 응답받기
+        const response = await fetch('/ai/chat', {
+            method: "post",
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'text/plain'
+            },					
+            body: new URLSearchParams({ question })
+        });
+        // 응답 결과 로그 출력 및 대화 패널에 추가하기
+        console.log(response);
+
+      } catch (error) {
+        console.log(error);
+      } finally {
+      }
+    } 
+  </script>
+
 </head>
 <body>
   <div class="d-flex flex-column vh-100">
