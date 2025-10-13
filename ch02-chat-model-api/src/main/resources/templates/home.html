@@ -25,6 +25,10 @@
         if (question === "") return;
         springai.addUserQuestion(question, "chatPanel");
 
+        // 응답이 오기까지 스피너 보여주기
+        springai.setSpinner("spinner", true);
+
+
         // AJAX 요청하고 응답받기
         const response = await fetch('/ai/chat-model', {
             method: "post",
@@ -44,6 +48,8 @@
       } catch (error) {
         console.log(error);
       } finally {
+        //스피너 숨기기
+        springai.setSpinner("spinner", false);
       }
     } 
   </script>

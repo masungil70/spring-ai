@@ -68,3 +68,13 @@ springai.printAnswerText = async function (responseBody, targetId) {
 	targetElement.innerHTML = content;
 
 }
+
+
+// ##### 진행중임을 표시하는 함수 #####
+springai.setSpinner = function(spinnerId, status) {
+  if(status) {
+    document.getElementById(spinnerId).classList.remove("d-none");
+  } else {
+    document.getElementById(spinnerId).classList.add("d-none");
+  }
+}
