@@ -23,22 +23,33 @@
         // 텍스트 질문을 얻고 대화 패널에 추가하기
         const question = document.getElementById("question").value;
         if (question === "") return;
+        springai.addUserQuestion(question, "chatPanel");
+
+        // 응답이 오기까지 스피너 보여주기
+        springai.setSpinner("spinner", true);
+
 
         // AJAX 요청하고 응답받기
-        const response = await fetch('/ai/chat', {
+        const response = await fetch('/ai/chat-model-stream', {
             method: "post",
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'text/plain'
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/x-ndjson' //라인으로 구분된 청크 텍스트
             },					
             body: new URLSearchParams({ question })
         });
-        // 응답 결과 로그 출력 및 대화 패널에 추가하기
-        console.log(response);
+
+        // AI 모델 답변이 들어갈 위치를 대화 패널에 추가
+        const uuid = springai.addAnswerPlaceHolder("chatPanel");
+        
+        // 텍스트 답변 출력하기
+        springai.printAnswerStreamText(response.body, uuid, "chatPanel");
 
       } catch (error) {
         console.log(error);
       } finally {
+        //스피너 숨기기
+        springai.setSpinner("spinner", false);
       }
     } 
   </script>
@@ -64,12 +75,39 @@
           </tr>
         </table>
       </div>
+
+      <!-- 사용자 질문을 보여줄 엘리먼트 UI -->
+      <!-- java script 함수로 처리 하도록 변경 함 : springai.addUserQuestion(question, "chatPanel");
+      <div class="d-flex justify-content-end m-2">
+        <table>
+          <tr>
+            <td><img src="/image/user.png" width="30"/></td>
+            <td><span>사용자 질문을 보여줄 엘리먼트</span></td>
+          </tr>
+        </table>
+      </div>
+      -->
+
+      <!-- AI 응답을 보여줄 엘리먼트 UI -->
+      <!-- java script 함수로 처리 하도록 변경 함 : 
+           springai.addAnswerPlaceHolder("chatPanel");
+           springai.printAnswerText(response.body, uuid);
+      <div class="d-flex justify-content-start border-bottom m-2">
+        <table>
+          <tr>
+            <td><img src="/image/assistant.png" width="50"/></td>
+            <td><span id=""> AI 응답을 보여줄 엘리먼트</span></td>
+          </tr>
+        </table>       
+      </div>
+      -->
+
     </div>
 
     <div id="inputPanel" class="bg-secondary-subtle">
       <div class="input-group p-2">
         <span class="input-group-text">질문</span>
-        <input id="question" type="text" class="form-control" value="">
+        <input id="question" type="text" class="form-control" value="Spring AI에 대해 100자 이내로 설명해줘" />
         <span class="input-group-text">
           <button type="button" class="btn btn-primary" >제출</button>
         </span>

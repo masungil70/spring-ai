@@ -357,4 +357,106 @@ spring.application.name=ch02-chat-model-api
       **동기화** 방식)
    2. generateStreamText(): 답변을 실시 채팅 같은 기능으로 받기 (AI가 글자를 쓰는 대로 한 글자씩 바로바로 전달받는 방식, ChatGPT 웹사이트처럼 **비동기** 방식)
 
+---
+### AiController 클래스 수정 
 
+---
+### html에서 ajax로 스트리밍 테이터 얻는 방법 
+```
+        //스트리밍 응답 처리
+    // responseBody는 서버가 보낸 응답의 내용물이 담겨있는 '파이프(ReadableStream)'입니다.
+    // .getReader()는 이 파이프에서 데이터를 조금씩 꺼내 읽을 수 있는 '수도꼭지' 역할을 하는 reader 객체를 가져옵니다.
+    const reader = responseBody.getReader();
+    // 서버가 보낸 데이터는 원래 컴퓨터만 알아볼 수 있는 숫자들의 배열(바이트 데이터)입니다.
+    // TextDecoder는 이 숫자 배열을 우리가 읽을 수 있는 'utf-8' 형식의 글자(텍스트)로 변환해주는 '번역기'입니다.
+    const decoder = new TextDecoder("utf-8");
+    let content = "";
+    while (true) {
+        // '수도꼭지'를 틀어 파이프에서 데이터 한 조각(chunk)이 나올 때까지 기다립니다.
+        // 데이터 조각이 나오면 { value, done } 이라는 객체를 반환합니다.
+        // value: 읽어온 데이터 조각 (아직은 글자가 아닌 숫자 배열).
+        // done: 데이터 파이프가 완전히 비어서 더 이상 읽을 내용이 없으면 true가 되고, 아직 남아있으면 false가 됩니다.
+        const { value, done } = await reader.read();
+
+        if (done) break;
+        // '번역기'를 사용해 숫자 배열(value)을 우리가 읽을 수 있는 텍스트 조각(chunk)으로 변환합니다.
+        let chunk = decoder.decode(value);
+        content += chunk;
+    }
+    console.log(content);
+
+```
+
+### 사용자 질문과 AI 응답을 보여줄 엘리먼트 UI를 home.html에 추가하여 볼 수 있게 기능 추가함 
+- 다음에 사용자 질문과 AI 응답을 보여줄 엘리먼트 UI을 javasscript  변경함 
+- 현재 ai에게 질문을 할 때 제출 버튼을 클릭하면 처리중인지 아닌지 확인 할 수 없어 다음에 진행중임을 표시하는 함수 구현 할 예정임  
+
+### ai에게 질문시 진행중임을 표시하는 기능 구현 
+- 현재 ai에게 질문을 많이 하면 질문과 응답이 자동으로 최단으로 이동되지 않습니다.
+- 다음에는 질문과 응답이 추가되고 채팅 패널을 최하단으로 자동 이동되게 구현 할 예정임  
+
+### 질문과 응답이 추가되고 채팅 패널을 최하단으로 자동 이동
+- 현재까지는 서버에 ChatModel의 기능을 동기화 함수인 call()를 사용하여 구현한 예제입니다 
+- 다음은 비동기 스트리임 응답에 대하여 알아볼 예정임 
+
+### ChatModel 비동기 응답 처리
+AiController.java 
+```
+  @PostMapping(
+    value = "/chat-model-stream",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+    produces = MediaType.APPLICATION_NDJSON_VALUE //라인으로 구분된 청크 텍스트
+  )
+  public Flux<String> chatModelStream(@RequestParam("question") String question) {
+    Flux<String> answerStreamText = aiService.generateStreamText(question);
+    return answerStreamText;
+  }
+
+```
+
+HomeController.java 파일에 /chat-model, /chat-model-stream  URL 추가합니다 
+```
+    @GetMapping("/chat-model")
+    public String chatModel() {
+        return "chat-model";
+    }
+
+    @GetMapping("/chat-model-stream")
+    public String chatModelStream() {
+        return "chat-model-stream";
+    }
+
+```
+
+home.html 파일을 복사하여 chat-model-stream.html, chat-model.html 파일을 생성합니다 
+TEMPLATES
+├─  chat-model-stream.html
+├─  chat-model.html
+└─  home.html
+
+home.html은 1장에 있는 내용으로 변경합니다 
+chat-model.html은 조금전에 진행한  chat-model 동기화 처리에 대한 예제로 변경합니다 
+chat-model-stream.html은 비동기화 처리에 대한 예제로 변경합니다 
+
+### springai.js에 스트리밍 텍스트 응답을 출력하는 함수 구현 
+```
+// ##### 스트리밍 텍스트 응답을 출력하는 함수 #####
+springai.printAnswerStreamText = async function (responseBody, targetId, chatPanelId) {
+    const targetElement = document.getElementById(targetId);
+    const reader = responseBody.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let content = "";
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        let chunk = decoder.decode(value);
+        content += chunk;
+        const targetElement = document.getElementById(targetId);
+        targetElement.innerHTML = content;
+        springai.scrollToHeight(chatPanelId);
+    }
+};
+
+```
+
+### springai.js에 스트리밍 텍스트 응답을 출력하는 함수 구현 

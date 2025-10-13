@@ -8,6 +8,7 @@ import com.example.demo.service.AiService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,4 +31,13 @@ public class AiController {
         return answer;
     }
     
+    @PostMapping(
+        value = "/chat-model-stream",
+        consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+        produces = MediaType.APPLICATION_NDJSON_VALUE //라인으로 구분된 청크 텍스트
+    )
+    public Flux<String> chatModelStream(@RequestParam("question") String question) {
+        Flux<String> answerStreamText = aiService.generateStreamText(question);
+        return answerStreamText;
+    }    
 }

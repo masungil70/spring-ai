@@ -74,6 +74,23 @@ springai.printAnswerText = async function (responseBody, targetId, chatPanelId) 
     springai.scrollToHeight(chatPanelId);
 }
 
+// ##### 스트리밍 텍스트 응답을 출력하는 함수 #####
+springai.printAnswerStreamText = async function (responseBody, targetId, chatPanelId) {
+    const targetElement = document.getElementById(targetId);
+    const reader = responseBody.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let content = "";
+    while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        let chunk = decoder.decode(value);
+        content += chunk;
+        const targetElement = document.getElementById(targetId);
+        targetElement.innerHTML = content;
+        springai.scrollToHeight(chatPanelId);
+    }
+};
+
 // ##### 진행중임을 표시하는 함수 #####
 springai.setSpinner = function(spinnerId, status) {
   if(status) {
