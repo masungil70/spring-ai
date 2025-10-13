@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+    <link href="/css/springai.css" rel="stylesheet" />
+    <script src="/js/springai.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        //이벤트 핸들러 설정
+        document.querySelector("#inputPanel .btn-primary").addEventListener("click", function(event) {
+        event.preventDefault();
+        handleSubmit();
+        });
+    });
+
+    // ##### 제출 버튼을 클릭했을 때 실행하는 함수 #####
+    async function handleSubmit() {
+      try {
+        // 텍스트 질문을 얻고 대화 패널에 추가하기
+        const question = document.getElementById("question").value;
+        if (question === "") return;
+
+        // AJAX 요청하고 응답받기
+        const response = await fetch('/ai/chat-model', {
+            method: "post",
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'text/plain'
+            },					
+            body: new URLSearchParams({ question })
+        });
+        // 응답 결과 로그 출력 및 대화 패널에 추가하기
+        console.log(response);
+
+        //스트리밍 응답 처리
+        // response.body는 서버가 보낸 응답의 내용물이 담겨있는 '파이프(ReadableStream)'입니다.
+        // .getReader()는 이 파이프에서 데이터를 조금씩 꺼내 읽을 수 있는 '수도꼭지' 역할을 하는 reader 객체를 가져옵니다.
+        const reader = response.body.getReader();
+        // 서버가 보낸 데이터는 원래 컴퓨터만 알아볼 수 있는 숫자들의 배열(바이트 데이터)입니다.
+        // TextDecoder는 이 숫자 배열을 우리가 읽을 수 있는 'utf-8' 형식의 글자(텍스트)로 변환해주는 '번역기'입니다.
+        const decoder = new TextDecoder("utf-8");
+        let content = "";
+        while (true) {
+          // '수도꼭지'를 틀어 파이프에서 데이터 한 조각(chunk)이 나올 때까지 기다립니다.
+          // 데이터 조각이 나오면 { value, done } 이라는 객체를 반환합니다.
+          // value: 읽어온 데이터 조각 (아직은 글자가 아닌 숫자 배열).
+          // done: 데이터 파이프가 완전히 비어서 더 이상 읽을 내용이 없으면 true가 되고, 아직 남아있으면 false가 됩니다.
+          const { value, done } = await reader.read();
+
+          if (done) break;
+          // '번역기'를 사용해 숫자 배열(value)을 우리가 읽을 수 있는 텍스트 조각(chunk)으로 변환합니다.
+          let chunk = decoder.decode(value);
+          content += chunk;
+        }
+        console.log(content);
+
+      } catch (error) {
+        console.log(error);
+      } finally {
+      }
+    } 
+  </script>
+
+</head>
+<body>
+  <div class="d-flex flex-column vh-100">
+    <div id="headPanel" class="navbar justify-content-between">
+      <a href="/" class="navbar-brand ps-2">
+        <img src="/image/spring_ai_logo_with_text.svg" width="200" />
+      </a>
+      <div id="spinner" class="spinner-border text-success d-none me-3" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+
+    <div id="chatPanel" class="flex-grow-1 container-fluid h-100 my-2" style="overflow-y:auto; overflow-x:hidden;">
+      <div class="d-flex justify-content-start border-bottom m-2">
+        <table>
+          <tr>
+            <td><img src="/image/assistant.png" width="50" /></td>
+            <td><span>질문을 올려주세요.</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div id="inputPanel" class="bg-secondary-subtle">
+      <div class="input-group p-2">
+        <span class="input-group-text">질문</span>
+        <input id="question" type="text" class="form-control" value="Spring AI에 대해 100자 이내로 설명해줘" />
+        <span class="input-group-text">
+          <button type="button" class="btn btn-primary" >제출</button>
+        </span>
+      </div>
+    </div>
+  </div>    
+</body>
+</html>
