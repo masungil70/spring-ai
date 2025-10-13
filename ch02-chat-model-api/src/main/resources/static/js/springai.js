@@ -17,6 +17,9 @@ springai.addUserQuestion = function (question, chatPanelId) {
     </div>
   `;
   document.getElementById(chatPanelId).innerHTML += html;
+
+  //채팅 패널의 스크롤을 제일 아래로 내려주는 함수 호출 한다
+  springai.scrollToHeight(chatPanelId);
 };
 
 
@@ -40,7 +43,7 @@ springai.addAnswerPlaceHolder = function (chatPanelId) {
 
 
 // ##### 텍스트 응답을 출력하는 함수 #####
-springai.printAnswerText = async function (responseBody, targetId) {
+springai.printAnswerText = async function (responseBody, targetId, chatPanelId) {
         //스트리밍 응답 처리
     // responseBody는 서버가 보낸 응답의 내용물이 담겨있는 '파이프(ReadableStream)'입니다.
     // .getReader()는 이 파이프에서 데이터를 조금씩 꺼내 읽을 수 있는 '수도꼭지' 역할을 하는 reader 객체를 가져옵니다.
@@ -67,8 +70,9 @@ springai.printAnswerText = async function (responseBody, targetId) {
     const targetElement = document.getElementById(targetId);
 	targetElement.innerHTML = content;
 
+    //채팅 패널의 스크롤을 제일 아래로 내려주는 함수 호출 한다
+    springai.scrollToHeight(chatPanelId);
 }
-
 
 // ##### 진행중임을 표시하는 함수 #####
 springai.setSpinner = function(spinnerId, status) {
@@ -78,3 +82,14 @@ springai.setSpinner = function(spinnerId, status) {
     document.getElementById(spinnerId).classList.add("d-none");
   }
 }
+
+// ##### 채팅 패널의 스크롤을 제일 아래로 내려주는 함수 #####
+springai.scrollToHeight = function (chatPanelId) {
+  //DOM 업데이트보다 스크롤 이동이 먼저 되면 안되므로
+  //스크롤 이동을 0.1초간 딜레이 시킴
+  setTimeout(() => {
+    const chatPanelElement = document.getElementById(chatPanelId);
+    chatPanelElement.scrollTop = chatPanelElement.scrollHeight;
+  }, 100);
+};
+

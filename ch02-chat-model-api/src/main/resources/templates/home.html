@@ -43,7 +43,7 @@
         const uuid = springai.addAnswerPlaceHolder("chatPanel");
         
         // 텍스트 답변 출력하기
-        springai.printAnswerText(response.body, uuid);
+        springai.printAnswerText(response.body, uuid, "chatPanel");
 
       } catch (error) {
         console.log(error);
