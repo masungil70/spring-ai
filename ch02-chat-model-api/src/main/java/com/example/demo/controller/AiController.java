@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.service.AiService;
+import com.example.demo.service.AiServiceByChatClient;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequiredArgsConstructor
 public class AiController {
 
-    private final AiService aiService;
+//    private final AiService aiService;
+    private final AiServiceByChatClient aiService;
 
     // HTTP POST 요청을 통해 AI에게 질문을 보낼 수 있는 엔드포인트를 만듭니다.
     @PostMapping(value = "/chat-model", 

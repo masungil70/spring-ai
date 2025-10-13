@@ -459,4 +459,129 @@ springai.printAnswerStreamText = async function (responseBody, targetId, chatPan
 
 ```
 
-### springai.js에 스트리밍 텍스트 응답을 출력하는 함수 구현 
+### springai.js 파일에서 printAnswerText(), printAnswerStreamText() 에 중복 코드가 존재하여 리팩토링 하였음
+```
+// ##### 텍스트 응답을 출력하는 함수 #####
+springai.printAnswerText = async function (responseBody, targetId, chatPanelId) {
+    // 스트리밍 텍스트 응답을 출력하는 함수 호출로 변경합니다 
+    springai.printAnswerStreamText(responseBody, targetId, chatPanelId);
+}
+
+// ##### 스트리밍 텍스트 응답을 출력하는 함수 #####
+springai.printAnswerStreamText = async function (responseBody, targetId, chatPanelId) {
+    //스트리밍 응답 처리
+    // 출력 대상 엘리먼트을 찾아옵니다.
+    const targetElement = document.getElementById(targetId);
+
+    // responseBody는 서버가 보낸 응답의 내용물이 담겨있는 '파이프(ReadableStream)'입니다.
+    // .getReader()는 이 파이프에서 데이터를 조금씩 꺼내 읽을 수 있는 '수도꼭지' 역할을 하는 reader 객체를 가져옵니다.
+    const reader = responseBody.getReader();
+    // 서버가 보낸 데이터는 원래 컴퓨터만 알아볼 수 있는 숫자들의 배열(바이트 데이터)입니다.
+    // TextDecoder는 이 숫자 배열을 우리가 읽을 수 있는 'utf-8' 형식의 글자(텍스트)로 변환해주는 '번역기'입니다.
+    const decoder = new TextDecoder("utf-8");
+    let content = "";
+    while (true) {
+        // '수도꼭지'를 틀어 파이프에서 데이터 한 조각(chunk)이 나올 때까지 기다립니다.
+        // 데이터 조각이 나오면 { value, done } 이라는 객체를 반환합니다.
+        // value: 읽어온 데이터 조각 (아직은 글자가 아닌 숫자 배열).
+        // done: 데이터 파이프가 완전히 비어서 더 이상 읽을 내용이 없으면 true가 되고, 아직 남아있으면 false가 됩니다.
+        const { value, done } = await reader.read();
+
+        if (done) break;
+        // '번역기'를 사용해 숫자 배열(value)을 우리가 읽을 수 있는 텍스트 조각(chunk)으로 변환합니다.
+        let chunk = decoder.decode(value);
+        content += chunk;
+
+        // 변환된 텍스트 조각을 출력 대상 엘리먼트에 계속 추가해 나갑니다.
+        targetElement.innerHTML = content;
+
+        //채팅 패널의 스크롤을 제일 아래로 내려주는 함수 호출 한다
+        springai.scrollToHeight(chatPanelId);
+
+    }
+    console.log(content);
+    
+};
+
+```
+
+### ChatClient 클래스 사용 
+
+  ChatClient: AI와의 대화를 위한 '만능 대화 도구'
+
+  이전에 AiService 코드를 보셨을 때, AI에게 질문 하나를 하기 위해 여러 단계를 거쳤던 것을
+  기억하시나요?
+
+   1. SystemMessage 만들기 (AI 역할 부여)
+   2. UserMessage 만들기 (사용자 질문)
+   3. Prompt 만들기 (메시지들을 한데 묶기)
+   4. ChatModel을 호출해서 ChatResponse 받기
+   5. ChatResponse에서 Generation을 꺼내고, 다시 AssistantMessage를 꺼내서 최종 텍스트 얻기
+
+  이 과정은 꽤 번거롭고 코드가 길어집니다.
+
+  ChatClient는 이 모든 번거로운 과정을 하나로 합쳐, 아주 간결하고 세련된 방식으로 AI와 대화할 수 있게 해주는 '만능 대화 도구'입니다.
+
+  비유하자면, ChatModel이 자동차의 '엔진' 그 자체라면, ChatClient는 운전자가 편하게 운전할 수 있도록 만들어진 '스마트 크루즈 컨트롤' 기능이 포함된 운전대와 같습니다. 엔진을 직접 다루지 않고도, 운전대를 통해 훨씬 쉽고 편하게 자동차를 제어할 수 있죠.
+
+  ---
+
+  ChatClient를 쓰면 무엇이 좋은가요?
+
+  가장 큰 장점은 코드가 놀랍도록 간결하고 읽기 쉬워진다는 것입니다. 이를 'Fluent API'라고 부르는데,
+  마치 문장을 쓰듯이 코드를 이어나갈 수 있습니다.
+
+  비교 예시:
+
+  1. 기존 `ChatModel` 사용 방식
+```
+   // (AiService에서 봤던 코드)
+   SystemMessage systemMessage = new SystemMessage("너는 시인이야.");
+   UserMessage userMessage = new UserMessage("장미에 대한 시를 써줘.");
+   Prompt prompt = new Prompt(List.of(systemMessage, userMessage));
+   
+   ChatResponse response = chatModel.call(prompt);
+   String answer = response.getResult().getOutput().getContent();
+```
+  2. `ChatClient` 사용 방식
+```
+   // ChatClient를 사용하면 위 코드가 이렇게 바뀝니다.
+   String answer = chatClient.prompt()
+           .system("너는 시인이야.")
+           .user("장미에 대한 시를 써줘.")
+           .call()
+           .content();
+```
+  보시다시피, 여러 객체를 만들 필요 없이 .prompt()로 시작해서 .system(), .user(), .call(), .content()를 체인처럼 줄줄이 연결하기만 하면 됩니다. 코드가 훨씬 짧아지고, "시스템 메시지 설정하고, 사용자 메시지 넣어서, 호출한 뒤, 내용물만 줘" 라는 흐름이 명확하게 보입니다.
+
+  ---
+
+  ChatClient의 주요 기능
+
+   * 간결한 API: .prompt().user(...).call().content() 처럼 물 흐르듯 코드를 작성할 수 있습니다.
+   * 스트리밍 지원: 실시간 응답도 .stream().content()만 붙이면 간단하게 처리됩니다.
+   * JSON 자동 변환: AI에게 "이 배우의 정보를 JSON 형식으로 줘" 라고 요청한 뒤, .entity(Actor.class)
+     한 줄만 추가하면 AI가 보내준 JSON 텍스트를 Actor라는 자바 객체로 자동으로 변환해주는 강력한
+     기능도 제공합니다.
+
+  어떻게 만드나요?
+
+  ChatClient는 보통 기존의 ChatModel을 가지고 아주 간단하게 만들 수 있습니다.
+```
+   // 빌더(Builder)를 사용해서 ChatModel로 ChatClient를 생성
+   ChatClient chatClient = ChatClient.builder(chatModel).build();
+   // 이제 이 chatClient를 사용해서 AI와 쉽게 대화할 수 있습니다.
+```
+  핵심 정리:
+
+  ChatClient는 AI와 대화하기 위해 거쳐야 했던 여러 단계를 하나로 통합한, 더 발전되고 사용하기 편리한 최신 도구입니다. Spring AI 프로젝트에서는 특별한 경우가 아니라면, ChatModel을 직접 사용하는 것보다 ChatClient를 사용하는 것이 훨씬 더 효율적이고 권장됩니다.
+
+---
+### AIController에 ChatClient 적용하기 
+```
+//    private final AiService aiService;
+    private final AiServiceByChatClient aiService;
+
+```
+
+서버를 다시 시작하고 chat-model, chat-model-stream을 각각 다시 시작해보세요 
