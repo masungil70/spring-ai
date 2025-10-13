@@ -44,7 +44,16 @@ springai.addAnswerPlaceHolder = function (chatPanelId) {
 
 // ##### 텍스트 응답을 출력하는 함수 #####
 springai.printAnswerText = async function (responseBody, targetId, chatPanelId) {
-        //스트리밍 응답 처리
+    // 스트리밍 텍스트 응답을 출력하는 함수 호출로 변경합니다 
+    springai.printAnswerStreamText(responseBody, targetId, chatPanelId);
+}
+
+// ##### 스트리밍 텍스트 응답을 출력하는 함수 #####
+springai.printAnswerStreamText = async function (responseBody, targetId, chatPanelId) {
+    //스트리밍 응답 처리
+    // 출력 대상 엘리먼트을 찾아옵니다.
+    const targetElement = document.getElementById(targetId);
+
     // responseBody는 서버가 보낸 응답의 내용물이 담겨있는 '파이프(ReadableStream)'입니다.
     // .getReader()는 이 파이프에서 데이터를 조금씩 꺼내 읽을 수 있는 '수도꼭지' 역할을 하는 reader 객체를 가져옵니다.
     const reader = responseBody.getReader();
@@ -63,32 +72,16 @@ springai.printAnswerText = async function (responseBody, targetId, chatPanelId) 
         // '번역기'를 사용해 숫자 배열(value)을 우리가 읽을 수 있는 텍스트 조각(chunk)으로 변환합니다.
         let chunk = decoder.decode(value);
         content += chunk;
+
+        // 변환된 텍스트 조각을 출력 대상 엘리먼트에 계속 추가해 나갑니다.
+        targetElement.innerHTML = content;
+
+        //채팅 패널의 스크롤을 제일 아래로 내려주는 함수 호출 한다
+        springai.scrollToHeight(chatPanelId);
+
     }
     console.log(content);
     
-    // 완성된 텍스트를 지정한 엘리먼트에 넣어줍니다.
-    const targetElement = document.getElementById(targetId);
-	targetElement.innerHTML = content;
-
-    //채팅 패널의 스크롤을 제일 아래로 내려주는 함수 호출 한다
-    springai.scrollToHeight(chatPanelId);
-}
-
-// ##### 스트리밍 텍스트 응답을 출력하는 함수 #####
-springai.printAnswerStreamText = async function (responseBody, targetId, chatPanelId) {
-    const targetElement = document.getElementById(targetId);
-    const reader = responseBody.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let content = "";
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        let chunk = decoder.decode(value);
-        content += chunk;
-        const targetElement = document.getElementById(targetId);
-        targetElement.innerHTML = content;
-        springai.scrollToHeight(chatPanelId);
-    }
 };
 
 // ##### 진행중임을 표시하는 함수 #####
