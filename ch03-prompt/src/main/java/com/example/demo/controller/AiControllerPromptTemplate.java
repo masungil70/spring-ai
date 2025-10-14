@@ -30,7 +30,8 @@ public class AiControllerPromptTemplate {
         @RequestParam("statement") String statement,
         @RequestParam("language") String language
         ) {
-        return aiService.promptTemplate1(statement, language);
+        //return aiService.promptTemplate1(statement, language);
+        return aiService.promptTemplate2(statement, language);
     }
     
 }

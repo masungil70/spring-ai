@@ -1,8 +1,10 @@
 package com.example.demo.service;
 
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.chat.prompt.SystemPromptTemplate;
@@ -52,5 +54,28 @@ public class AiServicePromptTemplate {
 
         return response;
     }
+
+
+    //PromptTemplate.createMessage() 메소드를 사용하여 프롬프트를 생성방법을 확인 
+    // ##### 메소드 #####
+    public Flux<String> promptTemplate2(String statement, String language) {    
+        // 1. 각 템플릿의 빈칸을 채울 값들을 Map으로 준비합니다.
+        Map<String, Object> userVariables = Map.of("statement", statement, "language", language);
+
+        // 2. 각 템플릿을 Message 객체로 렌더링합니다.
+        //    주의: .create()가 아닌 .createMessage()를 사용해야 Message 타입으로 반환됩니다.
+        Message systemMessage = systemTemplate.createMessage();
+        Message userMessage = userTemplate.createMessage(userVariables);
+
+        // 3. 생성된 메시지들을 리스트에 담아 최종 Prompt 객체를 만듭니다.
+        Prompt prompt = new Prompt(List.of(systemMessage, userMessage));
+
+        // 4. 완성된 Prompt를 ChatClient에 전달하여 AI를 호출합니다.
+        Flux<String> response = chatClient.prompt(prompt)
+            .stream()
+            .content();
+
+        return response;
+    }          
 
 }

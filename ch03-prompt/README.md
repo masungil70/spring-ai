@@ -236,8 +236,9 @@ AI에게 역할을 부여하는 '시스템 프롬프트'와 사용자의 '질문
 템플릿을 사용하는 방법
 
     1. 가장 기본적인 수동 방식 (각각의 메시지를 생성 후 조합)
-    2. ChatClient의 messages() 메소드를 사용하는 방법  
-    3. ChatClient와 함께 사용하는 세련된 방식 (.system()과 .user() 활용)
+    2. PromptTemplat.createMessage() 메소드를 프롬프트를 생성방법을 확인
+    3. ChatClient의 messages() 메소드를 사용하는 방법  
+    4. ChatClient와 함께 사용하는 세련된 방식 (.system()과 .user() 활용)
 
 ---
 ### 1. PromptTemplate을 사용하기 위한 서비스 클래스 구조 
@@ -399,5 +400,30 @@ public class AiControllerPromptTemplate {
     브라우저 주소창에 http://localhost:8080/prompt-template을 실행하고 언어를 변경 하고 제출을 하면 아래 그림과 같이 출력됩니다 
 
     ![alt text](image-2.png)
+
+---
+### PromptTemplat.createMessage() 메소드를 사용하여 프롬프트를 생성방법을 확인 
+```
+// ##### 메소드 #####
+public Flux<String> promptTemplate2(String statement, String language) {    
+  // 1. 각 템플릿의 빈칸을 채울 값들을 Map으로 준비합니다.
+  Map<String, Object> userVariables = Map.of("statement", statement, "language", language);
+
+  // 2. 각 템플릿을 Message 객체로 렌더링합니다.
+  //    주의: .create()가 아닌 .createMessage()를 사용해야 Message 타입으로 반환됩니다.
+  Message systemMessage = systemTemplate.createMessage();
+  Message userMessage = userTemplate.createMessage(userVariables);
+
+  // 3. 생성된 메시지들을 리스트에 담아 최종 Prompt 객체를 만듭니다.
+  Prompt prompt = new Prompt(List.of(systemMessage, userMessage));
+
+  // 4. 완성된 Prompt를 ChatClient에 전달하여 AI를 호출합니다.
+  Flux<String> response = chatClient.prompt(prompt)
+      .stream()
+      .content();
+
+  return response;
+}          
+```
 
 ---
