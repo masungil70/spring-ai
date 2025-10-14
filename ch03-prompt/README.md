@@ -442,3 +442,15 @@ public Flux<String> promptTemplate2(String statement, String language) {
 
 ```
 ---
+### 4. ChatClient와 함께 사용하는 세련된 방식 (.system()과 .user() 활용)
+```
+  public Flux<String> promptTemplate4(String statement, String language) {    
+    Flux<String> response = chatClient.prompt()
+        .system(systemTemplate.render())
+        .user(userTemplate.render(Map.of("statement", statement, "language", language)))
+        .stream()
+        .content();
+    return response;
+  }   
+```
+---

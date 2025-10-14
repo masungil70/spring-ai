@@ -32,7 +32,8 @@ public class AiControllerPromptTemplate {
         ) {
         //return aiService.promptTemplate1(statement, language);
         //return aiService.promptTemplate2(statement, language);
-        return aiService.promptTemplate3(statement, language);
+        //return aiService.promptTemplate3(statement, language);
+        return aiService.promptTemplate4(statement, language);
     }
     
 }
