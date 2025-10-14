@@ -91,5 +91,15 @@ public class HomeController {
 
 9. 위 작업이 완료된 것은 git 이력은 [3장 작업을 시작하기 위해 초기설정]을 checkout하여 작업은 진행하시면 됩니다 
 
+10. 실행 하여 테스트 해봅니다 
+
+    브라우저 주소창에 http://localhost:8080/을 실행하면 아래 그림과 같이 출력됩니다 
+
+    ![alt text](image.png)
+
+    prmopt template 버튼을 클릭하면 아래와 같이 실행되는 것을 확인 할 수 있습니다 
+
+    ![alt text](image-1.png)
 
 ---
+
