@@ -78,4 +78,15 @@ public class AiServicePromptTemplate {
         return response;
     }          
 
+    // ChatClient.prompt() 메소드, messages() 메소드를 사용하여 프롬프트 템플릿 객체를 전달하여 프롬프트를 생성합는 방법입니다 
+    public Flux<String> promptTemplate3(String statement, String language) {    
+        Flux<String> response = chatClient.prompt()
+            .messages(
+                systemTemplate.createMessage(),
+                userTemplate.createMessage(Map.of("statement", statement, "language", language)))
+            .stream()
+            .content();
+        return response;
+    }  
+
 }

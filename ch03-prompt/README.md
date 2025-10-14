@@ -237,7 +237,7 @@ AI에게 역할을 부여하는 '시스템 프롬프트'와 사용자의 '질문
 
     1. 가장 기본적인 수동 방식 (각각의 메시지를 생성 후 조합)
     2. PromptTemplat.createMessage() 메소드를 프롬프트를 생성방법을 확인
-    3. ChatClient의 messages() 메소드를 사용하는 방법  
+    3. ChatClient의 prompt(), messages() 메소드를 사용하는 방법  
     4. ChatClient와 함께 사용하는 세련된 방식 (.system()과 .user() 활용)
 
 ---
@@ -425,5 +425,20 @@ public Flux<String> promptTemplate2(String statement, String language) {
   return response;
 }          
 ```
+---
+### 3. ChatClient클래스의 prompt(), messages() 메소드를 사용하여 프롬프트 생성 방법
+```
+  // ChatClient.prompt() 메소드, messages() 메소드를 사용하여 프롬프트 템플릿 객체를 전달하여 프롬프트를 생성합는 방법입니다 
+  
+  public Flux<String> promptTemplate3(String statement, String language) {    
+    Flux<String> response = chatClient.prompt()
+        .messages(
+            systemTemplate.createMessage(),
+            userTemplate.createMessage(Map.of("statement", statement, "language", language)))
+        .stream()
+        .content();
+    return response;
+  }  
 
+```
 ---
