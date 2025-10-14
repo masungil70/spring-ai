@@ -454,3 +454,23 @@ public Flux<String> promptTemplate2(String statement, String language) {
   }   
 ```
 ---
+### 5. String.formatted() 메소드를 사용하여 프롬프트를 생성합니다.
+```
+    public Flux<String> promptTemplate5(String statement, String language) {    
+        String systemText = """
+            답변을 생성할 때 HTML와 CSS를 사용해서 파란 글자로 출력하세요.
+            <span> 태그 안에 들어갈 내용만 출력하세요.
+            """;
+        String userText = """
+            다음 한국어 문장을 %s로 번역해주세요.\n 문장: %s
+            """.formatted(language, statement);
+        
+        Flux<String> response = chatClient.prompt()
+            .system(systemText)
+            .user(userText)
+            .stream()
+            .content();
+        return response;
+    }     
+
+```
