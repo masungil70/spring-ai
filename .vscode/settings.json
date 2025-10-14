@@ -1,7 +1,15 @@
 {
     "java.configuration.updateBuildConfiguration": "interactive",
-    "terminal.integrated.env.windows": {
-       "JAVA_TOOL_OPTIONS": "-Dfile.encoding=UTF-8"
-    },
-    "java.compile.nullAnalysis.mode": "disabled"
+    "java.compile.nullAnalysis.mode": "disabled", 
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+        "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "args": [
+            "-NoExit",
+            "-Command",
+            "chcp 65001; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new(); $OutputEncoding=[System.Text.UTF8Encoding]::new()"
+        ]
+        }
+    }
 }

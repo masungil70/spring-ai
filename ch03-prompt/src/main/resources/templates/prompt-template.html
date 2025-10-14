@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,22 +23,32 @@
         // 텍스트 질문을 얻고 대화 패널에 추가하기
         const question = document.getElementById("question").value;
         if (question === "") return;
+        springai.addUserQuestion(question, "chatPanel");
+
+        // 응답이 오기까지 스피너 보여주기
+        springai.setSpinner("spinner", true);
 
         // AJAX 요청하고 응답받기
-        const response = await fetch('/ai/chat', {
-            method: "post",
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'text/plain'
-            },					
-            body: new URLSearchParams({ question })
+        const language = document.getElementById("language").value;
+        const response = await fetch('/ai/prompt-template', {
+          method: "post",
+					headers: {
+						'Content-Type': 'application/x-www-form-urlencoded',
+						'Accept': 'application/x-ndjson' //라인으로 구분된 청크 데이터
+					},					
+          body: new URLSearchParams({ "statement":question, language })
         });
-        // 응답 결과 로그 출력 및 대화 패널에 추가하기
-        console.log(response);
+        // AI 모델 답변이 들어갈 위치를 대화 패널에 추가
+        const uuid = springai.addAnswerPlaceHolder("chatPanel");
+        
+        // 텍스트 답변 출력하기
+        springai.printAnswerStreamText(response.body, uuid, "chatPanel");
 
       } catch (error) {
         console.log(error);
       } finally {
+        //스피너 숨기기
+        springai.setSpinner("spinner", false);
       }
     } 
   </script>
@@ -67,9 +77,21 @@
     </div>
 
     <div id="inputPanel" class="bg-secondary-subtle">
+      <!-- 언어 선택 시작 -->
+      <div class="input-group p-2">
+        <span class="input-group-text">언어</span>
+        <select id="language" class="form-control">
+          <option value="독일어">독일어</option>
+          <option value="중국어">중국어</option>
+          <option value="일본어">일본어</option>
+          <option value="영어" selected>영어</option>
+        </select>
+      </div>
+      <!-- 언어 선택 끝 -->
+      <!-- 질문 입력 패널 시작 -->
       <div class="input-group p-2">
         <span class="input-group-text">질문</span>
-        <input id="question" type="text" class="form-control" value="">
+        <input id="question" type="text" class="form-control" value="Spring AI에 대해 100자 이내로 설명해줘">
         <span class="input-group-text">
           <button type="button" class="btn btn-primary" >제출</button>
         </span>
