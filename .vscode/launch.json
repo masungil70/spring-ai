@@ -21,6 +21,16 @@
             "projectName": "ch02-chat-model-api",
             "args": "-Dfile.encoding=UTF-8",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-DemoApplication<ch03-prompt>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.example.demo.DemoApplication",
+            "projectName": "ch03-prompt",
+            "args": "-Dfile.encoding=UTF-8",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }
