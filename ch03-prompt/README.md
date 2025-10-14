@@ -552,3 +552,93 @@ public class AiControllerMultiMessages {
 
 ```
 
+---
+## 3.3 디폴트 메시지와 옵션 
+
+디폴트 메시지와 옵션은 ChatClient 인스턴스를 생성할 때, 해당 클라이언트를 통해 나가는 모든 요청에 일관된 규칙과 설정을 적용하기 위해 사용됩니다. ChatClient를 생성할 때 디폴트 메시지와 옵션을 설정하면, LLM을 요청할 때 생략(메시지, 옵션)할 수 있습니다.
+
+
+|메소드|설명|
+|---|---|
+|defaultSystem()| 기본 SystemMessage를 추가 |
+|defaultUser()| 기본 UserMessage를 추가 |
+|defaultOptions()| 기본 대화옵션을 설정|
+
+ 시나리오: "긍정 에너지 뿜뿜! 챗봇" 만들기
+
+  우리가 만들고 싶은 챗봇의 규칙은 다음과 같다고 가정해 봅시다.
+
+   1. 페르소나(Persona): 적절한 감탄사, 웃음등을 넣어서 친절하게 대화를 해주세요..
+   2. 언어: 모든 답변은 반드시 한국어로 해야 한다.
+   3. 창의성: 약간 창의적이고 다양한 답변을 생성해야 한다. (너무 딱딱하지 않게)
+   4. 토큰 : 너무 긴 답변을 하지 않도록 최대토큰 수를 300으로 설정한다
+   5. 모델: 비용 절약을 위해 gpt-3.5-turbo 모델을 사용한다.
+
+  이 규칙들을 모든 AI 요청마다 반복해서 설정하는 것은 번거롭고 실수의 여지가 있습니다. 이때 디폴트 메시지와 옵션을 사용하면 이 규칙들을 단 한 번만 설정할 수 있습니다.
+
+service/AiServiceDefaultMethod.java 
+
+```java
+
+@Service
+@Slf4j
+public class AiServiceDefaultMethod {
+  // ##### 필드 #####
+  private ChatClient chatClient;
+
+  // ##### 생성자 #####
+  public AiServiceDefaultMethod(ChatClient.Builder chatClientBuilder) {
+    chatClient = chatClientBuilder
+        .defaultSystem("""
+          적절한 감탄사, 웃음등을 넣어서 친절하게 대화를 해주세요.
+          모든 답변은 반드시 한국어로 해야 합니다.
+          """)
+        .defaultOptions(ChatOptions.builder()
+            .temperature(1.0)
+            .maxTokens(300)
+            .model("gpt-3.5-turbo")
+            .build())
+        .build();
+  }
+
+  // ##### 메소드 #####
+  public Flux<String> defaultMethod(String question) {   
+    Flux<String> response = chatClient.prompt()
+        .user(question)
+        .stream()
+        .content();
+    return response;
+  }
+}
+```
+
+controller/AiControllerDefaultMethod.java 
+```java
+
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerDefaultMethod {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceDefaultMethod aiService;
+  
+  // ##### 메소드 #####
+  @PostMapping(
+    value = "/default-method",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+    produces = MediaType.APPLICATION_NDJSON_VALUE
+  )
+  public Flux<String> defaultMethod(@RequestParam("question") String question) {
+    return aiService.defaultMethod(question);
+  }
+}
+
+```
+
+브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/default-method을 실행하고 제출을 하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-3.png)
+---
+

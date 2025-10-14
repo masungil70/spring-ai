@@ -22,4 +22,9 @@ public class HomeController {
         return "multi-messages";
     }
 
+    @GetMapping("/default-method")
+        public String defaultMethod() {
+        return "default-method";
+    }
+
 }
