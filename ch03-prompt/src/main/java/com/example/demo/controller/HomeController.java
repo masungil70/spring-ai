@@ -17,4 +17,9 @@ public class HomeController {
         return "prompt-template";
     }  
 
+    @GetMapping("/multi-messages")
+        public String multiMessages() {
+        return "multi-messages";
+    }
+
 }

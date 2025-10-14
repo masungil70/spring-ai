@@ -474,3 +474,81 @@ public Flux<String> promptTemplate2(String statement, String language) {
     }     
 
 ```
+---
+## 3.2 복수 메시지 추가 
+- LLM에 요청할 때 하나의 SystemMessage와 하나의 UserMessage만 프로프트에 포함되는 것은 아님 
+- 한개의 SystemMessage와 여러 개의 UserMessage, 여러 개의 AssistantMessage도 같이 포함될 수 있음 
+- 대표적인 예로 대화 기록을 유지 하기, 이전 대화 내용(UserMessage + AssistantMessage) 전체를 프롬트드에 포함 시킬 수 있음 
+
+### serivce/AiServiceMultiMessage.java 
+기능 설명 
+
+1. 시스템 메시지(System Message) 생성
+  * SystemMessage는 AI 모델에게 역할을 부여하거나 행동 지침을 내리는 특별한 메시지입니다.
+  * 여기서는 "당신은 AI 비서입니다. 지난 대화 내용을 참고해서 답변해주세요." 라는 지침을 설정하여, AI가 단순히 질문에만 답하는 게 아니라 이전 대화의 문맥을 파악하여 답변하도록 유도합니다.
+
+2. 대화 초기화
+  * if(chatMemory.size() == 0): chatMemory 리스트의 크기가 0이라는 것은 대화가 막 시작되었음을 의미합니다.
+  * 이때만 SystemMessage를 chatMemory에 추가합니다. 이렇게 하면 전체 대화 세션 동안 AI는 설정된 역할을 유지하게 됩니다.
+
+3. LLM 요청 및 응답 (Spring AI `ChatClient` 사용)
+  * chatClient.prompt(): LLM에 보낼 프롬프트(요청)를 구성하기 시작합니다.
+  * .messages(chatMemory): 가장 중요한 부분입니다. chatMemory에 저장된 이전 대화 기록 전체(SystemMessage 포함)를 요청에 추가합니다.
+  * .user(question): 그 뒤에 현재 사용자의 질문을 추가합니다.
+  * 결과적으로 [시스템 메시지, 이전 사용자 질문1, 이전 AI 답변1, 이전 사용자 질문2, ..., 현재 사용자 질문] 형태의 대화 목록이 LLM에 전달됩니다.
+  * .call().chatResponse(): 구성된 프롬프트를 LLM에 보내고, 응답이 올 때까지 기다린 후(call()), 전체 메타데이터를 포함한 ChatResponse 객체로 응답을 받습니다.
+
+4. 대화 기록 업데이트 (상태 관리)
+* LLM으로부터 답변을 받은 후, 방금 사용자가 질문한 내용(UserMessage)과 AI가 답변한 내용(AssistantMessage)을 chatMemory 리스트에 추가합니다.
+* 이렇게 chatMemory를 계속 업데이트해야 다음번 질문을 할 때 방금 나눈 대화까지 포함하여 문맥을 유지할 수 있습니다. 이 chatMemory 객체는 컨트롤러 계층에서 세션 등을 통해 관리 해야 합니다 
+
+5. 결과 반환
+  * chatResponse에서 AI의 답변에 해당하는 AssistantMessage를 꺼내고, 그 안에서 실제 텍스트 내용(getText())을 추출하여 반환합니다. 이 문자열이 사용자에게 보여질 최종 답변이 됩니다.
+
+요약 및 핵심 포인트
+
+* 상태 유지(Stateful) 대화: 이 서비스는 chatMemory라는 List를 통해 이전 대화 기록을 계속 유지하고 다음 요청에 활용함으로써, 단발성 질의응답이 아닌 연속적인 대화를 가능하게 합니다.
+* 역할 기반 프롬프팅: SystemMessage를 이용해 AI 모델의 페르소나(AI 비서)와 행동 방식을 지정하여 더 일관되고 원하는 방향의 답변을 얻습니다.
+* Spring AI 추상화: 복잡한 API 호출 과정을 ChatClient라는 객체와 .prompt()...call()과 같은 직관적인 메소드 체이닝으로 매우 간단하게 처리하고 있습니다. 개발자는 HTTP 요청/응답이나 JSON 파싱에 신경 쓸 필요가 없습니다.
+
+**동기 방식**으로 구현한 이유는 로직을 간단하고 쉽게 이해 할 수 있게 하기 위해서 입니다.
+
+---
+### controller/AiControllerMultiMessage.java
+이 클래스는 사용자의 웹 요청을 받아 AiServiceMultiMessages 서비스와 연결해주는 스프링
+컨트롤러(Controller) 입니다. 이 컨트롤러의 가장 중요한 역할은 HTTP 세션(Session)을 이용해
+사용자별 대화 기록을 관리하는 것입니다.
+
+``` java
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerMultiMessages {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceMultiMessages aiService;
+  
+  // ##### 요청 매핑 메소드 #####
+  @PostMapping(
+    value = "/multi-messages",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+    produces = MediaType.TEXT_PLAIN_VALUE
+  )
+  public String multiMessages(
+      @RequestParam("question") String question, HttpSession session) {
+    
+    // 1. 세션에서 대화 기록 가져오기
+    List<Message> chatMemory = (List<Message>) session.getAttribute("chatMemory");
+    // 2. 대화 기록이 없으면 새로 생성
+    if(chatMemory == null) {
+      chatMemory = new ArrayList<Message>();
+      session.setAttribute("chatMemory", chatMemory);
+    }
+    // 3. 서비스 호출하여 답변 받기
+    String answer = aiService.multiMessages(question, chatMemory);
+    
+    // 4. 답변 반환  }
+}
+
+```
+
