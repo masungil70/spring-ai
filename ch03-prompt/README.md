@@ -832,3 +832,160 @@ http://localhost:8080/zero-shot-prompt 을 실행하고 제출을 하면 상황�
 
 ----
 
+## 3.6 퓨-샷 프롬프트 
+퓨샷 프롬프트(Few-Shot Prompt)이란?
+
+### 똑똑한 친구에게 힌트 주기
+
+지난번에 만났던 똑똑한 친구 '척척박사 AI'를 다시 불러 볼까요?
+
+'제로샷'은 이 친구에게 아무 힌트 없이 바로 질문하는 거였죠? '퓨샷'은 반대예요. 질문하기 전에 몇 가지 힌트나 연습 문제를 먼저 보여주는 거랍니다.
+
+상황을 하나 상상해 봐요. 여러분이 '동물 소리 언어'라는 새로운 암호를 만들었어요. 이 암호를 척척박사 AI에게 가르쳐주고 싶어요.
+
+그냥 "코끼리는 동물 소리 언어로 뭐야?" 라고 물어보면 AI는 알 수가 없겠죠? 그래서 힌트를 주는 거예요.
+
+---
+
+이게 바로 퓨샷 프롬프트예요!
+
+여러분은 AI에게 이렇게 말해요.
+
+> "안녕! 지금부터 내가 '동물 소리 언어'를 가르쳐 줄게. 잘 봐봐!"
+>
+> 힌트 1) '강아지'는 '멍멍왈왈'이라고 해.
+>
+> 힌트 2) '고양이'는 '야옹사뿐'이라고 해.
+>
+> 힌트 3) '병아리'는 '삐약뽀송'이라고 해.
+>
+> "자, 이제 진짜 문제야! 그럼 '사자'는 뭐라고 할까?"
+
+---
+
+느낌이 오나요?
+
+  * 퓨(Few): '몇 개의'라는 뜻이에요.
+  * 샷(Shot): '힌트' 또는 '예시'라고 생각하면 돼요.
+
+즉, '몇 개의 힌트(예시)를 주고 물어보는 것'이 바로 퓨샷 프롬프트랍니다.
+
+여러분은 AI에게 3개의 연습 문제(힌트)를 먼저 보여줬어요. 그랬더니 AI는 "아하! 동물의 특징이나 소리를 합쳐서 만드는 암호구나!" 하고 규칙을 배우게 돼요.
+
+그래서 AI는 아마 이렇게 대답할 거예요.
+
+> "알았어요! '사자'는 '어흥갈기'라고 하면 되겠네요!"
+
+정리하면, 퓨샷 프롬프트는 AI가 처음 보거나 어려운 문제를 더 잘 풀 수 있도록, 친절하게 몇 개의 모범 답안(예시)을 먼저 보여주는 방법이에요. 이렇게 하면 AI가 규칙을 더 빨리 깨우치고, 우리가 원하는 정답을 척척 내놓을 수 있답니다
+
+### service/AiServiceFewShotPrompt.java 
+
+``` java
+@Service
+@Slf4j
+public class AiServiceFewShotPrompt {
+  // ##### 필드 #####
+  private ChatClient chatClient;
+
+  // ##### 생성자 #####
+  public AiServiceFewShotPrompt(ChatClient.Builder chatClientBuilder) {
+    chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+  public String fewShotPrompt(String order) {
+    // 프롬프트 생성
+    String strPrompt = """
+        고객 주문을 유효한 JSON 형식으로 바꿔주세요.
+        추가 설명은 포함하지 마세요.
+
+        예시1:
+        작은 피자 하나, 치즈랑 토마토 소스, 페퍼로니 올려서 주세요.
+        JSON 응답:
+        {
+          "size": "small",
+          "type": "normal",
+          "ingredients": ["cheese", "tomato sauce", "pepperoni"]
+        }
+
+        예시1:
+        큰 피자 하나, 토마토 소스랑 바질, 모짜렐라 올려서 주세요.
+        JSON 응답:
+        {
+          "size": "large",
+          "type": "normal",
+          "ingredients": ["tomato sauce", "basil", "mozzarella"]
+        }
+
+        고객 주문: %s""".formatted(order);
+
+    Prompt prompt = Prompt.builder()
+        .content(strPrompt)
+        .build();
+
+    // LLM으로 요청하고 응답을 받음
+    String pizzaOrderJson = chatClient.prompt(prompt)
+        .options(ChatOptions.builder()
+            .temperature(0.0)   // 다양한 응답이 필요 없으므로 0.0으로 설정
+            .maxTokens(300)     // 최대 토큰 수를 300으로 설정
+            .build())
+        .call()
+        .content();
+
+    return pizzaOrderJson;
+  }
+}
+
+```
+
+### controller/AiControllerFewShotPrompt.java
+
+```java
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerFewShotPrompt {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceFewShotPrompt aiService; 
+
+  // ##### 메소드 #####
+  @PostMapping(
+    value = "/few-shot-prompt",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+    produces = MediaType.APPLICATION_JSON_VALUE
+  )
+  public String fewShotPrompt(@RequestParam("order") String order) {
+    //서술식 주문을 JSON으로 변환
+    String json = aiService.fewShotPrompt(order);
+    return json;
+  } 
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/few-shot-prompt 을 실행하고 제출을 하면 상황에 맞는 리뷰 를 입력하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-5.png)
+
+실행 화면을 보시면 JSON 응답이 출력되지 않는 것을 확인 할 수 있습니다.
+JSON을 출력 될 수 있게 
+stringai.js 파일을 아래와 같이 추가 하시고 다시 실행하시면 됩니다.
+
+```js
+// ##### JSON을 이쁘게 출력하는 함수 #####
+springai.printAnswerJson = async function(jsonString, uuid, chatPanelId) {
+  const jsonObject = JSON.parse(jsonString);
+  // 들여쓰기를 2로 설정해서 이쁘게 문자열로 만듬
+  const prettyJson = JSON.stringify(jsonObject, null, 2);
+  document.getElementById(uuid).innerHTML = "<pre>" + prettyJson + "</pre>";
+  springai.scrollToHeight(chatPanelId);
+};
+
+```
+다시 실행 결과 
+![alt text](image-6.png)
+
+---
+

@@ -84,6 +84,15 @@ springai.printAnswerStreamText = async function (responseBody, targetId, chatPan
     
 };
 
+// ##### JSON을 이쁘게 출력하는 함수 #####
+springai.printAnswerJson = async function(jsonString, uuid, chatPanelId) {
+  const jsonObject = JSON.parse(jsonString);
+  // 들여쓰기를 2로 설정해서 이쁘게 문자열로 만듬
+  const prettyJson = JSON.stringify(jsonObject, null, 2);
+  document.getElementById(uuid).innerHTML = "<pre>" + prettyJson + "</pre>";
+  springai.scrollToHeight(chatPanelId);
+};
+
 // ##### 진행중임을 표시하는 함수 #####
 springai.setSpinner = function(spinnerId, status) {
   if(status) {
