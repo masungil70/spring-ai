@@ -642,7 +642,7 @@ http://localhost:8080/default-method을 실행하고 제출을 하면 아래 그
 ![alt text](image-3.png)
 ---
 
-3.4 프롬프트 엔지니어링이란?
+## 3.4 프롬프트 엔지니어링이란?
 
 프롬프트 엔지니어링은 AI 모델(특히 LLM)로부터 원하는 최상의 결과를 얻어내기 위해, 모델에 입력하는 질문이나 지시어(프롬프트)를 최적화하는 기술이자 과정입니다. 단순히 질문을 던지는 것을 넘어, AI가 더 정확하고, 창의적이며, 일관된 답변을 생성하도록 유도하는 'AI와의 소통법'이라고 할 수 있습니다.
 
@@ -672,3 +672,163 @@ http://localhost:8080/default-method을 실행하고 제출을 하면 아래 그
   6. 자기 일관성 기법 (Self-Consistency)
 
 ---
+## 3.5 제로-샷 프롬프팅
+
+### 똑똑한 친구에게 처음 물어보기
+
+예를 들어 여기에 엄청나게 똑똑한 친구 '척척박사 AI'가 있다고 상상해 봐요. 이 친구는 세상의 모든 책을 다 읽어서 모르는 게 거의 없어요.
+
+어느 날, 여러분이 이 친구에게 다가가서 아무런 힌트나 예시 없이 그냥 바로 질문을 던지는 거예요.
+```
+질문> "안녕! '강아지'를 영어로 뭐라고 해?"
+
+척척박사 AI는 잠시 생각하더니 바로 "Dog!"라고 대답해 줘요.
+```
+바로 이게 제로샷 프롬프트예요!
+
+* 제로(Zero): '0개'라는 뜻이에요.
+* 샷(Shot): '기회' 또는 '시도'라는 뜻인데, 여기서는 '힌트'라고 생각하면 쉬워요.
+
+즉, '힌트를 0개 주고 바로 물어보는 것'을 제로샷 프롬프트라고 불러요.
+
+여러분은 척척박사 AI에게 "고양이는 Cat이야" 라거나 "사자는 Lion이야" 같은 연습 문제(예시)를 하나도 보여주지 않았어요. 그냥 AI가 원래부터 똑똑하다는 걸 믿고, 곧바로 질문을 던진 거죠.
+
+AI가 이미 수많은 정보를 공부해서 '강아지'가 영어로 'Dog'라는 걸 알고 있기 때문에 정답을 맞힐 수 있었던 거예요.
+
+정리하면, 제로샷 프롬프트는 AI에게 어떤 일을 시킬 때, 참고할 만한 예시를 전혀 주지 않고 "네 실력을 믿을게! 바로 한번 해봐!" 하고 바로 물어보는 방식을 말한답니다.
+
+### 왜 이것이 제로샷(Zero-Shot)인가요?
+
+제로샷 프롬프트를 이용해서 리뷰 감정을 '긍정적', '중립적', '부정적'으로 분류하는 예제를 작성 해보겠습니다
+
+핵심은 AI에게 분류 예시를 단 하나도 보여주지 않고, 오직 명확한 지시문과 분석할 텍스트만으로 작업을 요청하는 것입니다.
+
+제로샷 감정 분류 프롬프트 예제
+
+아래 프롬프트는 AI에게 해야 할 작업, 분류할 카테고리, 그리고 분석할 리뷰 텍스트를 명확하게 전달합니다.
+
+기본 프롬프트 구조
+```
+[지시문]
+영화 리뷰를 [긍정적, 중립적, 부정적] 중에서 하나로 분류하세요. 레이블만 반환하세요.
+
+[리뷰]
+{ewview}
+
+[감정 분류]
+```
+
+예시 1: 긍정적인 리뷰 분류
+```
+[지시문]
+영화 리뷰를 [긍정적, 중립적, 부정적] 중에서 하나로 분류하세요. 레이블만 반환하세요.
+
+[리뷰]
+우와!! ^^ 세계 최고의 대배우이신 존경하는 우리 탐크루즈님의 액션연기가 정말 환상적이네요!!! ^^ 존경하는 우리 톰 크루즈님, 헤일리 앳웰님, 빙 라메스님, 사이먼 페그님, 에사이 모랄레스님, 폼 클레멘티에프님, 그렉 타잔 데이비스님 등의 열연이 가슴 뭉클한 액션대작입니다~~^^😊🤩😀😍존경하는 우리 '미션 임파서블: 파이널 레코닝' 영화 관람을 강추~ 강추드립니다~^^ '미션 임파서블: 파이널 레코닝' 팀의 내한에 깊이 고개 숙여 감사 인사드리며, 영화의 대박을 기원드립니다!! ^^😊🤩😬💐♥♥♥♥♥
+
+[감정 분류]
+예상되는 AI의 답변: 긍정적
+```
+
+예시 2: 부정적인 리뷰 분류
+```
+[지시문]
+영화 리뷰를 [긍정적, 중립적, 부정적] 중에서 하나로 분류하세요. 레이블만 반환하세요.
+
+[리뷰]
+역대 미션 임파서블 보다 최고로 노잼.계속 봐왔던 비슷한 액션이라 신선함이 떨어지고 존재감을 알 수 없는 팀원과 몇몇 등장 인물. 늘어지는 편집으로 지루함을 느낌.
+
+[감정 분류]
+예상되는 AI의 답변: 부정적
+```
+
+예시 3: 중립적인 리뷰 분류
+```
+[지시문]
+영화 리뷰를 [긍정적, 중립적, 부정적] 중에서 하나로 분류하세요. 레이블만 반환하세요.
+
+[리뷰]
+이번 미션 임파서블 8은 시리즈의 마무리답게 스케일이 크고 완성도 높은 액션을 선보인다. 여전히 톰 크루즈의 열정적인 연기와 실제로 수행한 스턴트 장면들은 인상적이지만, 이전 작품들과 비교했을 때 큰 새로움은 느껴지지 않는다. 스토리는 복잡한 음모와 첩보전의 긴장감을 유지하려 했지만 다소 늘어지는 부분도 있다. 팬들에게는 익숙한 재미를 주지만, 새로운 관객에게는 약간 부담스러울 수도 있는 작품이다. 전체적으로 무난하게 즐길 수 있는 액션 영화였다.
+
+[감정 분류]
+예상되는 AI의 답변: 중립적
+```
+---
+
+위 예시들 어디에도 "이런 문장은 긍정이야" 또는 "저런 문장은 부정이야" 와 같은 학습용 예제가 전혀 포함되어 있지 않습니다.
+
+오직 "감정을 이 세 가지 카테고리로 분류해줘"라는 지시와 "이게 분석할 문장이야"라는 과제만 주어졌습니다. AI는 자신이 미리 학습한 방대한 언어 데이터를 기반으로 '만족', '추천' 같은 단어가 긍정적인 느낌을 준다는 것을 스스로 판단하여 결과를 내놓습니다. 이것이 바로 제로샷 프롬프트의 핵심입니다.
+
+---
+### service/AiServiceZeroShotPrompt.java 
+
+``` java
+
+@Service
+@Slf4j
+public class AiServiceZeroShotPrompt {
+  // ##### 필드 #####
+  private ChatClient chatClient;
+  private PromptTemplate promptTemplate = PromptTemplate.builder()
+      .template("""
+          영화 리뷰를 [긍정적, 중립적, 부정적] 중에서 하나로 분류하세요.
+          레이블만 반환하세요.
+          리뷰: {review}
+        """)
+      .build();
+
+  // ##### 생성자 #####
+  public AiServiceZeroShotPrompt(ChatClient.Builder chatClientBuilder) {
+    chatClient = chatClientBuilder
+        .defaultOptions(ChatOptions.builder()
+            .temperature(0.0)
+            .maxTokens(4)
+            .build())
+        .build();
+  }
+
+  // ##### 메소드 #####
+  public String zeroShotPrompt(String review) {
+    String sentiment = chatClient.prompt()
+        .user(promptTemplate.render(Map.of("review", review)))
+        .call()
+        .content();
+    return sentiment;
+  }
+}
+
+```
+
+### controller/AiControllerZeroShotPrompt.java
+
+``` java
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerZeroShotPrompt {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceZeroShotPrompt aiService;
+  
+  //##### 메소드 ##### 
+  @PostMapping(
+    value = "/zero-shot-prompt",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+    produces = MediaType.TEXT_PLAIN_VALUE
+  )
+  public String zeroShotPrompt(@RequestParam("review") String review) {
+    String reviewSentiment = aiService.zeroShotPrompt(review);
+    return reviewSentiment;
+  }  
+}
+
+```
+
+
+브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/zero-shot-prompt 을 실행하고 제출을 하면 상황에 맞는 리뷰 를 입력하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-4.png)
+
+----
+
