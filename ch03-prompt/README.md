@@ -989,3 +989,129 @@ springai.printAnswerJson = async function(jsonString, uuid, chatPanelId) {
 
 ---
 
+## 3.7 역할 부여 프롬프팅 (Role-Playing Prompting)
+
+역할 부여 프롬프팅를 쉽게 설명 하기 위해 다음 시나리오를 예로 들겠습니다 
+
+혹시 친구랑 ‘소꿉놀이’나 ‘병원놀이’ 해본 적 있나요?
+
+한 명은 의사 선생님 역할을 맡고, 다른 한 명은 아픈 환자 역할을 맡잖아요. 그러면 의사 역할을 맡은 친구는 진짜 의사 선생님처럼 “어디가 아파서 왔나요?” 하고 묻고, 환자 역할을 맡은 친구는 “배가 아파요~” 하고 대답하죠.
+
+이렇게 누군가의 역할을 정해주면, 그 역할에 맞게 생각하고 말하게 돼요.
+
+‘역할 부여 프롬프팅’은 바로 이 놀이랑 똑같아요! 우리가 인공지능(AI)에게 특정한 역할을 맡겨주는 거예요.
+
+---
+
+🤔 그냥 물어볼 때와 역할을 줄 때, 어떻게 다를까요?
+
+예를 들어, 인공지능에게 사자에 대해 물어본다고 해봐요.
+
+1. 그냥 물어보기
+
+> 나: 사자에 대해 알려줘.
+>
+> AI: 🦁 사자는 고양이과에 속하는 포유류로, 아프리카의 초원에 주로 서식합니다. ‘백수의 왕’이라고 불리며… (조금 딱딱하고 어려운 설명)
+
+2. 역할을 주고 물어보기 (⭐역할 부여 프롬프팅⭐)
+
+> 나: 너는 지금부터 정글을 탐험하는 용감한 탐험가야. 사자에 대해 실감 나게 설명해줘!
+>
+> AI (탐험가 역할): 🤠 어이, 친구! 내가 어제 정글에서 겪은 일인데 말이야! 커다란 갈기를 가진 사자 한 마리를 만났지 뭐야! 그 녀석, 어찌나 용맹하게 생겼는지… (재미있고 실감 나는 이야기)
+
+어때요? 똑같이 사자에 대해 물어봤지만, 두 번째 대답이 훨씬 더 재미있고 귀에 쏙쏙 들어오죠?
+
+---
+
+👍 역할 부여를 하면 왜 좋을까요?
+
+1. 더 재미있는 대답을 들을 수 있어요.
+    
+    방금 본 탐험가 예시처럼, 인공지능이 동화 작가, 우주비행사, 요리사 등 다양한 역할로 변신해서 신기하고 재미있는 이야기를 해줄 수 있어요.
+
+2. 더 이해하기 쉬워져요.
+  
+    만약 어려운 과학 지식이 궁금하다면? 인공지능에게 “너는 초등학생을 가르치는 친절한 과학 선생님이야.”라고 역할을 정해주면, 어려운 내용도 눈높이에 맞춰 쉽게 설명해 줄 거예요.
+
+3. 원하는 종류의 글을 얻을 수 있어요.
+
+    “너는 시인이야. 가을에 대한 시를 써줘.” 라고 하면 멋진 시를 써주고, “너는 뉴스 기자야. 오늘 날씨에 대한 기사를 써줘.” 라고 하면 진짜 뉴스 기사처럼 글을 써준답니다.
+
+✨ 정리
+
+역할 부여 프롬프팅은 인공지능(AI)에게 “너는 지금부터 OOO이야!” 하고 마법의 모자를 씌워주는 것과 같아요.
+
+그 모자를 쓴 인공지능은 진짜 그 역할이 된 것처럼 생각하고, 그 역할에 딱 맞는 말투와 지식으로 우리에게 대답해 준답니다.
+
+다음에 인공지능과 대화할 때 꼭 한번 써보세요! “너는 OOO이야!” 하고 역할을 정해주면, 훨씬 더 똑똑하고 재미있는 인공지능 친구가 될 거예요.
+
+### service/AiServiceRolePlayingPrompt.java
+```java
+@Service
+@Slf4j
+public class AiServiceRoleAssignmentPrompt {
+  // ##### 필드 #####
+  private ChatClient chatClient;
+
+  // ##### 생성자 #####
+  public AiServiceRoleAssignmentPrompt(ChatClient.Builder chatClientBuilder) {
+    chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 시스템 메시지를 활용해서 역할 부여하기 #####
+  public Flux<String> roleAssignment(String requirements) {
+    Flux<String> travelSuggestions = chatClient.prompt()
+        // 시스템 메시지 추가
+        .system("""
+            당신이 여행 가이드 역할을 해 주었으면 좋겠습니다.
+            아래 요청사항에서 위치를 알려주면, 근처에 있는 3곳을 제안해 주고,
+            이유를 달아주세요. 경우에 따라서 방문하고 싶은 장소 유형을 
+            제공할 수도 있습니다.
+            출력 형식은 <ul> 태그이고, 장소는 굵게 표시해 주세요.
+            """)
+        // 사용자 메시지 추가
+        .user("요청사항: %s".formatted(requirements))
+        // 대화 옵션 설정
+        .options(ChatOptions.builder()
+            .temperature(1.0)
+            .maxTokens(1000)
+            .build())
+        // LLM으로 요청하고 응답 얻기
+        .stream()
+        .content();
+    return travelSuggestions;
+  }
+}
+ 
+```
+
+### controller/AiControllerRoleAssignmentPrompt.java
+```java
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerRoleAssignmentPrompt {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceRoleAssignmentPrompt aiService; 
+  
+  //##### 메소드 ##### 
+  @PostMapping(
+    value = "/role-assignment",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+    produces = MediaType.APPLICATION_NDJSON_VALUE     
+  )
+  public Flux<String> roleAssignment(@RequestParam("requirements") String requirements) {
+    Flux<String> travelSuggestions = aiService.roleAssignment(requirements);
+    return travelSuggestions;
+  }  
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/role-assignment 을 실행하고 제출을 하면 상황에 맞는 리뷰 를 입력하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-7.png)
+---
+
