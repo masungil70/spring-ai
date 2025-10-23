@@ -1317,3 +1317,146 @@ http://localhost:8080/step-back-prompt 을 실행하고 제출을 클릭하면 �
 단계별 질문에 대한 답변을 얻어야 하므로 시간이 조금 걸리 수 있습니다.
 
 ![alt text](image-8.png)
+
+## 3.9 생각의 사슬 프롬프트 
+
+### 생각의 사슬(Chain-of-Thought) 프롬프트란?
+
+컴퓨터에게 어려운 질문을 할 때, "정답만 말하지 말고, 정답을 찾는 과정도 함께 보여줘!" 라고 똑똑하게 요청하는 방법이에요.
+
+왜 좋을까요?
+
+1. 정확도가 높아져요: 컴퓨터가 스스로 생각의 단계를 점검하면서 실수를 줄여요.
+2. 이해하기 쉬워요: 컴퓨터가 왜 그런 답을 했는지 우리가 쉽게 이해하고 믿을 수 있어요.
+3. 더 어려운 문제도 풀 수 있어요: 복잡한 문제도 단계별로 나누어 생각하게 하므로 결국 풀어낼 수 있게 돼요.
+
+예를 들어
+
+👎 그냥 물어보기 (나쁜 예)
+
+질문: "상민이는 사과를 5개 가지고 있었어요. 친구에게 2개를 주고, 엄마가 3개를 더 주셨어요. 지금 상민이는 사과를 몇 개 가지고 있을까요?"
+
+답변: (혼자 복잡하게 생각하다가...) "4개입니다." (앗! 틀렸어요!)
+
+컴퓨터가 서두르거나 착각해서 엉뚱한 답을 줄 수 있어요. 왜 틀렸는지 우리는 알 수 없죠.
+
+
+👍 좋은 질문 어려운 수학 문제를 만났을 때!
+
+친구가 이런 어려운 수학 문제를 냈다고 상상해 볼까요?
+
+질문 : "운동장에 아이들이 몇 명 놀고 있었어. 잠시 후 5명이 집으로 가고, 10명이 새로 왔어. 지금 운동장에는 총 23명의 아이들이 있다면, 맨 처음에는 몇 명이 있었을까?"
+
+이 문제를 보고 "답은 18명이야!" 라고 바로 말하면, 친구가 "어떻게 풀었어?" 라고 물어볼 수 있겠죠? 만약 답이 틀렸다면, 어디서부터 잘못 생각했는지 알 수가 없어요.
+
+하지만 이렇게 차근차근 풀이 과정을 설명하면 어떨까요?
+
+1. "지금 23명이 있구나."
+2. "10명이 새로 오기 전에는, 23명에서 10명을 빼서 13명이 있었겠네."
+3. "그리고 5명이 집으로 가기 전에는, 그 13명에 5명을 더해서 원래 18명이 있었구나!"
+4. "아하! 그래서 맨 처음에는 18명이 있었던 거야!"
+
+어때요? 이렇게 풀이 과정을 하나씩 보여주니 어떻게 답이 나왔는지 이해하기 쉽고, 중간에 실수했더라도 금방 찾아낼 수 있겠죠?
+
+컴퓨터에게 "생각하는 방법"을 알려주는 것!
+
+'생각의 사슬(Chain-of-Thought)' 프롬프트는 바로 위에서 설명한 수학 풀이 과정과 똑같아요!
+
+우리가 컴퓨터 인공지능(AI)에게 어려운 질문을 할 때, "정답만 줘!" 라고 하는 대신, "정답을 찾기 위해 어떤 생각의 단계를 거쳤는지 차근차근 설명해 줘!" 라고 요청하는 거예요.
+
+마치 생각들이 사슬처럼 하나씩 연결되어 정답으로 이어진다고 해서 '생각의 사슬'이라는 이름이 붙었습니다.
+
+CoT는 특히 복잡한 수학 문제에 유용합니다. 중간 단계의 추론을 명확이 함으로써 오류를 줄이는 데 도움이 됩니다 
+
+service/AiServiceChainOfThoughtPrompt.java
+```java
+/**
+ * '생각의 사슬(Chain-of-Thought)' 프롬프트 기법을 사용하여
+ * AI의 추론 과정을 단계별로 유도하고 답변을 생성하는 서비스 클래스입니다.
+ */
+@Service
+@Slf4j
+public class AiServiceChainOfThoughtPrompt {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 ChatClient 인스턴스
+
+  // ##### 생성자 #####
+  public AiServiceChainOfThoughtPrompt(ChatClient.Builder chatClientBuilder) {
+    // ChatClient 빌더를 통해 ChatClient 인스턴스를 생성합니다.
+    chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+  /**
+   * '생각의 사슬(Chain-of-Thought)' 프롬프트를 사용하여 질문에 대한 답변을 스트림 형태로 반환합니다.
+   * "한 걸음씩 생각해 봅시다."라는 문구와 구체적인 예시를 프롬프트에 포함하여,
+   * AI가 문제 해결 과정을 단계별로 생각하고 설명하도록 유도합니다.
+   *
+   * @param question 사용자로부터의 질문
+   * @return AI가 생성하는 답변의 스트림 (Flux<String>). AI의 생각 과정을 실시간으로 볼 수 있습니다.
+   */
+  public Flux<String> chainOfThought(String question) {
+    Flux<String> answer = chatClient.prompt()
+        .user("""
+            %s
+            한 걸음씩 생각해 봅시다.
+  
+            [예시]
+            질문: 제 동생이 2살일 때, 저는 그의 나이의 두 배였어요.
+            지금 저는 40살인데, 제 동생은 몇 살일까요? 한 걸음씩 생각해 봅시다.
+  
+            답변: 제 동생이 2살일 때, 저는 2 * 2 = 4살이었어요.
+            그때부터 2년 차이가 나며, 제가 더 나이가 많습니다.
+            지금 저는 40살이니, 제 동생은 40 - 2 = 38살이에요. 정답은 38살입니다.
+            """.formatted(question))
+        .stream() // 답변을 스트림 형태로 받습니다.
+        .content();
+    return answer;
+  }
+}
+
+```
+
+controller/AiControllerChainOfThoughtPrompt.java
+```java
+/**
+ * '생각의 사슬(Chain-of-Thought)' AI 서비스와 관련된 웹 요청을 처리하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerChainOfThoughtPrompt {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceChainOfThoughtPrompt aiService; // '생각의 사슬' 로직을 처리하는 서비스
+
+  //##### 메소드 ##### 
+  /**
+   * '/ai/chain-of-thought' 경로로 들어오는 POST 요청을 처리합니다.
+   * 사용자의 질문을 받아 '생각의 사슬' 기법으로 답변을 생성하고, 그 과정을 스트리밍으로 반환합니다.
+   *
+   * @param question 'question'이라는 이름의 요청 파라미터 (사용자 질문)
+   * @return AI가 생성하는 답변의 스트림 (Flux<String>). 클라이언트는 이 스트림을 통해 AI의 생각 과정을 실시간으로 받을 수 있습니다.
+   */
+  @PostMapping(
+    value = "/chain-of-thought",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.APPLICATION_NDJSON_VALUE // 이 엔드포인트는 NDJSON(Newline Delimited JSON) 스트림 형식으로 데이터를 생성합니다. 서버-센트 이벤트(SSE)와 유사하게 동작합니다.
+  )
+  public Flux<String> chainOfThought(@RequestParam("question") String question) {
+    // AI 서비스를 호출하여 질문에 대한 답변 스트림을 얻습니다.
+    Flux<String> answer = aiService.chainOfThought(question);
+    // 얻은 스트림을 클라이언트에게 그대로 반환합니다. Spring WebFlux가 스트리밍 처리를 담당합니다.
+    return answer;
+  } 
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/chain-of-thought 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+단계별 질문에 대한 답변을 얻어야 하므로 시간이 조금 걸리 수 있습니다.
+
+![alt text](image-9.png)
+
+

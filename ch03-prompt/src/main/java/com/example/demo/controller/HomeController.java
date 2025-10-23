@@ -47,4 +47,9 @@ public class HomeController {
         return "step-back-prompt";
     }
 
+    @GetMapping("/chain-of-thought")
+    public String chainOfThought() {
+        return "chain-of-thought";
+    }   
+
 }
