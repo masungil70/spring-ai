@@ -1,7 +1,5 @@
 {
     "configurations": [
-
-
         {
             "type": "java",
             "name": "Spring Boot-DemoApplication<ch01-spring-ai-project>",
@@ -30,6 +28,16 @@
             "mainClass": "com.example.demo.DemoApplication",
             "projectName": "ch03-prompt",
             "args": "-Dfile.encoding=UTF-8",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-DemoApplication<ch04-structured-output>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.example.demo.DemoApplication",
+            "projectName": "ch04-structured-output",
+            "args": "",
             "envFile": "${workspaceFolder}/.env"
         }
     ]
