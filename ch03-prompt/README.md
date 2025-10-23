@@ -1460,3 +1460,203 @@ http://localhost:8080/chain-of-thought 을 실행하고 제출을 클릭하면 �
 ![alt text](image-9.png)
 
 
+## 자기 일관성 
+
+'생각의 사슬'을 사용해서 똑같은 질문에 대한 여러 개의 답변을 얻은 후, 가장 많이 나온 답변을 최종 답변으로 선택하는 '다수결 원칙'이에요.
+
+왜 좋을까요?
+
+ 1. 정확도가 훨씬 높아져요: 컴퓨터가 어쩌다 한 번 실수하더라도, 다른 올바른 답변들에 묻혀서 최종   정답이 될 확률이 크게 줄어들어요.
+ 2. 답변을 더 믿을 수 있어요: 여러 번 확인해서 얻은 결과이므로, 우리는 그 답변을 더 신뢰할 수 있게 돼요.
+
+한마디로 '자기 일관성'은, 한 번만 물어보지 않고 여러 번 물어본 뒤, 가장 많이 나온 답을 믿는 '똑똑한 다수결의 원칙'이랍니다
+
+'생각의 사슬' 복습하기!
+
+혹시 앞에서 설명한 '생각의 사슬' 기억나나요? 어려운 문제를 풀 때, 컴퓨터에게 "풀이 과정을 차근차근 설명해 줘!"라고 해서 정확한 답을 얻는 방법이었죠.
+
+그런데 컴퓨터도 가끔은... 실수를 할 때가 있어요. 풀이 과정은 그럴듯했는데, 계산을 잘못해서 답이 틀리는 경우죠. 딱 한 번만 물어보면, 그 답변이 맞았는지 틀렸는지 확인하기가 어려워요.
+
+그래서 등장한 슈퍼 파워! '자기 일관성' 프롬프트 🦸‍♂️
+
+'자기 일관성'은 이런 실수를 막기 위한 아주 똑똑한 방법이에요.
+
+아주 간단해요. "여러 명의 똑똑한 친구들에게 물어보고, 가장 많이 나온 답을 정답으로 정하는 것"과 같아요.
+
+상황을 상상해 볼까요?
+
+내가 아주 어려운 수학 문제를 풀었는데, 내 답이 맞는지 자신이 없어요. 그래서 반에서 수학을 잘하는 친구 세 명에게 똑같은 문제를 풀어달라고 부탁했어요.
+
+* 철수: "풀이 과정은 이렇고... 정답은 18이야!"
+* 영희: "나는 다른 방법으로 풀었는데... 어? 나도 정답은 18이네!"
+* 민준: "음... 나는 이렇게 풀어서... 정답이 17이 나왔어."
+
+철수와 영희는 똑같이 '18'이라는 답을 냈고, 민준이만 '17'이라고 했어요. 여러분이라면 어떤 답을 더 믿을 건가요? 아마도 여러 명이 똑같이 말한 '18'을 진짜 정답이라고 생각하겠죠?
+
+'자기 일관성' 프롬프트는 컴퓨터에게 바로 이 일을 시키는 거예요!
+
+'자기 일관성'은 어떻게 작동할까요?
+
+1. 똑같은 질문을 여러 번 하기 
+  - 컴퓨터에게 똑같은 질문을 한 번이 아니라 세 번, 다섯 번, 또는 열 번 이렇게 여러 번 하는 거예요. (마치 여러 친구에게 물어보듯이!)
+
+2. 매번 '생각의 사슬'로 풀게 하기
+  - 질문할 때마다 "생각의 사슬(풀이 과정)"을 사용해서 답을 찾으라고 시켜요. 컴퓨터는 매번 약간씩 다른 방법으로 생각해서 답을 찾을 수 있어요.
+
+3. 정답들을 모으기 
+  - 이제 여러 개의 '풀이 과정 + 정답' 세트가 모였겠죠?
+
+4. 투표하기! (다수결)
+  - 모인 정답들을 보고 가장 많이 나온 답을 '진짜 정답'으로 뽑는 거예요.
+
+예시로 다시 한번 볼까요?
+
+질문: "운동장에 아이들이 몇 명 놀고 있었어. 잠시 후 5명이 집으로 가고, 10명이 새로 왔어. 지금 운동장에는 총 23명의 아이들이 있다면, 맨 처음에는 몇 명이 있었을까?"
+
+🤖 컴퓨터의 첫 번째 생각 (철수의 생각)
+1. 현재 23명이 있다.
+2. 10명이 오기 전에는 23 - 10 = 13명이었다.
+3. 5명이 가기 전에는 13 + 5 = 18명이었다.
+4. 정답: 18명
+
+🤖 컴퓨터의 두 번째 생각 (영희의 생각)
+1. 이 문제는 거꾸로 풀어야 한다.
+2. 현재 23명에서 새로 온 10명을 빼면 13명.
+3. 13명은 5명이 떠난 후의 인원이므로, 떠나기 전 인원은 13명에 5명을 더한 18명이다.
+4. 정답: 18명
+
+🤖 컴퓨터의 세 번째 생각 (민준이의 생각)
+1. 현재 23명이 있다.
+2. 10명이 새로 왔으니, 그 전에는 13명.
+3. 5명이 갔으니까... 13에서 5를 빼면 8명인가? 아, 헷갈린다.
+4. 정답: 17명 (실수!)
+
+결과 취합 및 투표:
+* 첫 번째 답: 18명
+* 두 번째 답: 18명
+* 세 번째 답: 17명
+
+가장 많이 나온 답은 18명이므로, 컴퓨터는 최종적으로 "정답은 18명입니다!"라고 우리에게 알려줍니다.
+
+service/AiServiceSelfConsistency.java
+```java
+/**
+ * '자기 일관성(Self-Consistency)' 프롬프트 기법을 구현한 서비스 클래스입니다.
+ * 동일한 질문을 여러 번 하고, 가장 많이 나온 답변을 최종 결과로 선택하여
+ * AI 응답의 신뢰도를 높이는 방법을 보여줍니다.
+ */
+@Service
+@Slf4j
+public class AiServiceSelfConsistency {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 ChatClient 인스턴스
+
+  // 프롬프트 템플릿: 사용자 입력을 받아 AI에게 보낼 최종 프롬프트를 생성합니다.
+  private PromptTemplate promptTemplate = PromptTemplate.builder()
+      .template("""
+          다음 내용을 [IMPORTANT, NOT_IMPORTANT] 둘 중 하나로 분류해 주세요.
+          레이블만 반환하세요.
+          내용: {content}
+          """)
+      .build();
+
+  // ##### 생성자 #####
+  public AiServiceSelfConsistency(ChatClient.Builder chatClientBuilder) {
+    // ChatClient 빌더를 통해 ChatClient 인스턴스를 생성합니다.
+    chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+  /**
+   * 자기 일관성 기법을 사용하여 주어진 내용을 분류합니다.
+   * AI에게 동일한 질문을 5번 반복하고, 다수결 원칙에 따라 최종 분류를 결정합니다.
+   *
+   * @param content 사용자가 분류를 요청한 내용
+   * @return "중요함" 또는 "중요하지 않음" 이라는 최종 분류 결과
+   */
+  public String selfConsistency(String content) {
+    int importantCount = 0;
+    int notImportantCount = 0;
+    
+    // 프롬프트 템플릿에 사용자 입력을 넣어 완전한 프롬프트를 생성합니다.
+    String userText = promptTemplate.render(Map.of("content", content));
+  
+    // 자기 일관성을 위해 동일한 요청을 5번 반복합니다.
+    for (int i = 0; i < 5; i++) {
+      // LLM 요청 및 응답 받기
+      String output = chatClient.prompt()
+          .user(userText)
+          .options(ChatOptions.builder()
+              // Temperature를 1.0으로 설정하여 응답의 다양성을 높입니다.
+              // 온도가 높을수록 AI는 더 창의적이고 무작위적인 답변을 생성하므로,
+              // 매번 다른 추론 경로를 탐색하게 되어 자기 일관성 기법에 적합합니다.
+              .temperature(1.0)
+              .build())
+          .call()
+          .content();
+  
+      log.info("시도 {}: {}", i + 1, output);
+  
+      // 각 시도의 결과를 집계합니다.
+      if (output.contains("IMPORTANT")) {
+        importantCount++;
+      } else {
+        notImportantCount++;
+      }
+    }
+  
+    // 다수결로 최종 분류를 결정합니다.
+    String finalClassification = importantCount > notImportantCount ?
+            "중요함" : "중요하지 않음";
+    
+    log.info("최종 결과: {}, (중요: {}표, 중요하지 않음: {}표)", 
+        finalClassification, importantCount, notImportantCount);
+
+    return finalClassification;
+  }
+}
+
+```
+
+
+controller/AiControllerSelfConsistency.java
+```java
+/**
+ * '자기 일관성(Self-Consistency)' AI 서비스와 관련된 웹 요청을 처리하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerSelfConsistency {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceSelfConsistency aiService; // '자기 일관성' 로직을 처리하는 서비스
+
+  // ##### 메소드 #####
+  /**
+   * '/ai/self-consistency' 경로로 들어오는 POST 요청을 처리합니다.
+   * 사용자가 보낸 내용을 '자기 일관성' 기법으로 분류하고 최종 결과를 반환합니다.
+   *
+   * @param content 'content'라는 이름의 요청 파라미터 (사용자가 분류를 요청한 내용)
+   * @return AI 서비스로부터 받은 최종 분류 결과 (예: "중요함")
+   */
+  @PostMapping(
+    value = "/self-consistency",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.TEXT_PLAIN_VALUE // 이 엔드포인트는 일반 텍스트 형식의 데이터를 생성합니다.
+  )
+  public String selfConsistency(@RequestParam("content") String content) {
+    // AI 서비스를 호출하여 내용에 대한 최종 분류 결과를 얻습니다.
+    String answer = aiService.selfConsistency(content);
+    // 얻은 답변을 클라이언트에게 반환합니다.
+    return answer;
+  }  
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/self-consistency 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+단계별 질문에 대한 답변을 얻어야 하므로 시간이 조금 걸리 수 있습니다.
+
+![alt text](image-10.png)

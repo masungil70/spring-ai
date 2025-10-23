@@ -52,4 +52,9 @@ public class HomeController {
         return "chain-of-thought";
     }   
 
+    @GetMapping("/self-consistency")
+    public String selfConsistency() {
+        return "self-consistency";
+    }     
+
 }
