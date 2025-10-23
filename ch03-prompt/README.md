@@ -965,7 +965,7 @@ public class AiControllerFewShotPrompt {
 ```
 
 ### 브라우저에서 실행 하여 테스트 해보기
-http://localhost:8080/few-shot-prompt 을 실행하고 제출을 하면 상황에 맞는 리뷰 를 입력하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+http://localhost:8080/few-shot-prompt 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
 
 ![alt text](image-5.png)
 
@@ -1110,8 +1110,210 @@ public class AiControllerRoleAssignmentPrompt {
 ```
 
 ### 브라우저에서 실행 하여 테스트 해보기
-http://localhost:8080/role-assignment 을 실행하고 제출을 하면 상황에 맞는 리뷰 를 입력하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+http://localhost:8080/role-assignment 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
 
 ![alt text](image-7.png)
 ---
 
+## 3.8 스탭-백 프롬프트(Step-back Prompting)
+
+스탭-백 프롬프트는 복접한 질문을 여러 단계로 분해해, 단계별로 배경 지식을 확보는 기법입니다. 이 기법은 LLM이 즉각적인 답변을 생성하지 전에 "한 걸음 물러나" 문제와 관련된 폭 넓은 배경 지식을 갖도록 유도합니다. 단계별 질문에 대한 답변은 다음 질문의 배경 지식으로 이어지기 때문에, LLM은 단계적으로 배경 지식을 쌓아가며 더 정확한 답변을 제공할 수 있습니다 .
+
+네가 서울에서 강릉울릉도로 여행을 가는데, 가장 돈을 적게 쓰는 방법을 찾아야 하는 임무를 받았다고 상상해 보세요
+
+👎 나쁜 질문 (방법을 정해버린 질문)
+
+나: "인공지능아! 서울역에서 KTX 타고 강릉역에 내려서, 강릉항에서 배 타고 울릉도로 가는 가장 싼 방법을 알려줘!"
+
+  이 질문은 나쁘진 않지만, 아주 똑똑한 방법은 아닙니다. 왜 그럴까요? 나는 이미 'KTX를 타고 강릉으로 간다'고 방법을 마음속으로 정해버렸거든요.  만약 버스를 타거나, 다른 항구(예: 묵호항, 포항항)로 가는 게 더 쌀 수도 있는데, 그 기회를 놓치게 되는 거지요.
+
+  ---
+
+  👍 좋은 질문 (스텝-백 프롬프트!)
+
+  여기서 '스텝-백(Step-back)', 즉 '한 걸음 뒤로 물러나서' 생각해 보는 것입니다. 진짜 목표가 뭐였지? 바로 '가장 싸게 울릉도 가기'였지!
+
+  그래서 이렇게 질문을 바꿔보는 것입니다.
+
+  > 나: "인공지능아! 서울에서 울릉도까지 가는데, 돈을 가장 아낄 수 있는 최고의 방법은 뭐야?"
+
+  이렇게 '어떻게' 갈지는 빼고, 최종 목표만 질문하면 어떻게 될까요?
+
+  인공지능은 마치 탐험가처럼 모든 가능성을 찾아보기 시작합니다.
+
+   1. KTX + 강릉항 배편은 얼마일까?
+   2. KTX + 묵호항 배편은 얼마일까?
+   3. 고속버스 + 강릉항 배편은 얼마일까?
+   4. 고속버스 + 묵호항 배편은 얼마일까?
+   5. 혹시 포항항에서 출발하는 건 더 싸지 않을까?
+
+  이렇게 모든 경우의 수와 가격을 비교해서, KTX를 타는 것보다 "아하! 서울에서 고속버스를 타고
+  묵호항으로 가서 배를 타는 게 만 원이나 더 싸구나!" 하는 숨겨진 최고의 정답을 찾아내 주는 것입니다!
+
+  ---
+
+  정리하자면!
+
+   * 그냥 질문: 좁은 길로 가도록 명령하는 것입니다. (KTX 타고 강릉항으로 가!)
+   * 스텝-백 질문: 최종 목적지(울릉도에 가장 싸게 가기!)만 알려주고, 가장 좋은 길을 찾아달라고
+     부탁하는 것.
+
+  이게 바로 스텝-백 프롬프트의 마법입니다! 한 걸음 물러나서 더 넓게 보면, 더 똑똑하고 좋은 답을
+  얻을 수 있는 기술입니다.
+
+  
+### service/AiServiceStepBackPrompt.java
+```java
+/**
+ * Step-Back Prompt 기법을 사용하여 AI 응답을 생성하는 서비스 클래스입니다.
+ * 이 기법은 원본 질문에서 한 걸음 물러나 더 넓은 맥락의 질문을 생성하고,
+ * 그 질문들에 대한 답변을 바탕으로 원본 질문에 대한 최종 답변을 도출합니다.
+ */
+@Service
+@Slf4j
+public class AiServiceStepBackPrompt {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 ChatClient 인스턴스
+
+  // ##### 생성자 #####
+  public AiServiceStepBackPrompt(ChatClient.Builder chatClientBuilder) {
+    // ChatClient 빌더를 통해 ChatClient 인스턴스를 생성합니다.
+    chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+  /**
+   * Step-Back Prompt 기법을 실행하여 질문에 대한 답변을 반환합니다.
+   * @param question 사용자로부터의 원본 질문
+   * @return AI가 생성한 최종 답변
+   * @throws Exception JSON 파싱 등에서 예외가 발생할 수 있습니다.
+   */
+  public String stepBackPrompt(String question) throws Exception {
+    // 1. 원본 질문을 바탕으로 단계별 질문(step-back questions)을 생성하도록 AI에 요청합니다.
+    String questions = chatClient.prompt()
+        .user("""
+            사용자 질문을 처리하기 Step-Back 프롬프트 기법을 사용하려고 합니다.
+            사용자 질문을 단계별 질문들로 재구성해주세요. 
+            맨 마지막 질문은 사용자 질문과 일치해야 합니다.
+            단계별 질문을 항목으로 하는 JSON 배열로 출력해 주세요.
+            예시: ["...", "...", "...", ...]
+            사용자 질문: %s
+            """.formatted(question))
+        .call()
+        .content();
+
+    // 단계별 질문(step-back questions)
+    log.info("단계별 질문 결과 원본 문자열: {}", questions);
+    /*  예시 출력:
+    * ```json
+    [
+        "서울에서 울릉도로 가기 위해 어떤 교통수단을 고려하고 있나요?",
+        "각 교통수단의 비용을 비교해본 적이 있나요?",
+        "울릉도로 가는 여행 일정은 어떻게 되나요?",
+        "예산 범위는 어느 정도인가요?",
+        "비용이 가장 적게 드는 방법은 무엇일까요?"   
+    ]
+    ```
+
+    여기서 주목할 부분은 마지막 질문이 원본 질문과 일치한다는 점입니다.
+    */
+
+    // AI 응답에서 JSON 배열 부분만 추출합니다. 
+    // JSON 배열은 ```[...]``` 형태로 감싸져 있을 수 있으므로 이를 제거합니다.
+    String json = questions.substring(questions.indexOf("["), questions.indexOf("]")+1);
+      log.info("단계별 질문(JSON): {}", json);
+      
+    // JSON 문자열을 List<String> 형태로 변환합니다.
+    ObjectMapper objectMapper = new ObjectMapper();
+    List<String> listQuestion = objectMapper.readValue(
+        json,
+        new TypeReference<List<String>>() {}
+    );
+    
+    // 2. 각 단계별 질문에 대한 답변을 순차적으로 구합니다.
+    String[] answerArray = new String[listQuestion.size()];
+    for(int i=0; i<listQuestion.size(); i++) {
+      String stepQuestion = listQuestion.get(i);
+      // 이전 단계까지의 답변을 현재 질문의 컨텍스트로 함께 제공합니다.
+      String stepAnswer = getStepAnswer(stepQuestion, answerArray);
+      answerArray[i] = stepAnswer;
+
+      // 단계별 질문에 대한 답변은 실행 후 로그를 통해 확인할 수 있습니다.
+      // 각 단계의 질문과 답변을 로그에 기록합니다.
+      // (이해시 중요) 이 부분을 꼭 설명해야 한다 
+      log.info("단계{} 질문: {}, 답변: {}", i+1, stepQuestion, stepAnswer);
+    }
+
+    // 3. 마지막 질문(원본 질문)에 대한 답변을 최종 결과로 반환합니다.
+    return answerArray[answerArray.length-1];
+  }
+
+  /**
+   * 특정 단계의 질문에 대한 답변을 AI로부터 받아옵니다.
+   * @param question 현재 단계의 질문
+   * @param prevStepAnswers 이전 단계들에서 얻은 답변들의 배열 (컨텍스트로 활용)
+   * @return 현재 질문에 대한 AI의 답변
+   */
+  public String getStepAnswer(String question, String... prevStepAnswers) {
+    String context = "";
+    // 이전 단계의 답변들을 하나의 문자열(컨텍스트)로 합칩니다.
+    for (String prevStepAnswer : prevStepAnswers) {
+      context += Objects.requireNonNullElse(prevStepAnswer, "");
+    }
+    // 질문과 컨텍스트를 함께 AI에 전달하여 답변을 요청합니다.
+    String answer = chatClient.prompt()
+        .user("""
+            %s
+            문맥: %s
+            """.formatted(question, context))
+        .call()
+        .content();
+    return answer;
+  }
+}
+
+```
+
+
+
+controller/AiControllerStepBackPrompt.java
+```java
+/**
+ * Step-Back Prompt 기법을 사용하는 AI 서비스와 관련된 웹 요청을 처리하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerStepBackPrompt {
+  // ##### 필드 ##### 
+  @Autowired
+  private AiServiceStepBackPrompt aiService; // Step-Back Prompt 로직을 처리하는 서비스
+  
+  /**
+   * '/ai/step-back-prompt' 경로로 들어오는 POST 요청을 처리합니다.
+   * 사용자의 질문을 받아 Step-Back Prompt 기법을 통해 답변을 생성하고 반환합니다.
+   *
+   * @param question 'question'이라는 이름의 요청 파라미터 (사용자 질문)
+   * @return AI 서비스로부터 생성된 텍스트 답변
+   * @throws Exception AiService에서 예외가 발생할 경우
+   */
+  @PostMapping(
+    value = "/step-back-prompt",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.TEXT_PLAIN_VALUE  // 이 엔드포인트는 일반 텍스트 형식의 데이터를 생성합니다.
+  )
+  public String stepBackPrompt(@RequestParam("question") String question) throws Exception {
+    // AI 서비스를 호출하여 질문에 대한 답변을 얻습니다.
+    String answer = aiService.stepBackPrompt(question);
+    // 얻은 답변을 클라이언트에게 반환합니다.
+    return answer;
+  }
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/step-back-prompt 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+단계별 질문에 대한 답변을 얻어야 하므로 시간이 조금 걸리 수 있습니다.
+
+![alt text](image-8.png)
