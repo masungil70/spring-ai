@@ -22,4 +22,9 @@ public class HomeController {
         return "bean-output-converter";
     }  
 
+    @GetMapping("/generic-bean-output-converter")
+    public String genericBeanOutputConverter() {
+        return "generic-bean-output-converter";
+    }   
+
 }

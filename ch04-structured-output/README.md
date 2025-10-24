@@ -622,6 +622,7 @@ http://localhost:8080/bean-output-converter 을 실행하고 제출을 클릭하
 
 ![alt text](image-2.png)
 
+
 ### 저수준에서 고수준으로 변환하고 실행을 해보세요 
 controller/AiControllerListOutputConverter.java
 ```java
@@ -641,3 +642,137 @@ public class AiControllerBeanOutputConverter {
 ```
 실행 결과 
 ![alt text](image-2.png)
+
+---
+
+## 4.4 List<T>로 변환 (BeanOutputConverter)
+
+LLM의 출력을 List<T> 객체로 변화하고 싶다면, BeanOutputConverter<List<T>>를 사용할 수 있습니다. T는 변환할 자바 타입입니다. 이 변환기는 LLM이 JSON 출력을 할 수 있도록 지침을 생성하고, LLM의 출력을 List<T> 객체로 변환합니다.
+
+service/AiServiceParameterizedTypeReference.java
+```java
+/**
+ * AI의 응답을 List<Hotel>과 같은 제네릭 컬렉션 타입의 자바 객체로 변환하는 방법을 보여주는 서비스 클래스입니다.
+ * 자바의 타입 이레이저(Type Erasure) 문제로 인해 .class 리터럴을 사용할 수 없을 때,
+ * ParameterizedTypeReference를 사용하여 완전한 제네릭 타입 정보를 유지하는 방법을 설명합니다.
+ */
+@Service
+@Slf4j
+public class AiServiceParameterizedTypeReference {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 클라이언트
+
+  // ##### 생성자 #####
+  public AiServiceParameterizedTypeReference(ChatClient.Builder chatClientBuilder) {
+    this.chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+
+  /**
+   * 저수준(Low-Level) API와 ParameterizedTypeReference를 사용하여 AI 응답을 List<Hotel>으로 변환합니다.
+   * 제네릭 타입 정보를 유지하면서 변환하는 모든 단계를 수동으로 제어하는 방법을 보여줍니다.
+   *
+   * @param cities 도시 목록 문자열
+   * @return 각 도시의 호텔 정보를 담은 Hotel 객체의 리스트
+   */
+  public List<Hotel> genericBeanOutputConverterLowLevel(String cities) {
+    // 1. BeanOutputConverter를 생성합니다.
+    //    자바의 타입 이레이저 때문에 List<Hotel>.class 와 같이 제네릭 타입을 포함한 클래스 리터럴은 사용할 수 없습니다.
+    //    대신, ParameterizedTypeReference를 사용하면 런타임에도 List와 Hotel이라는 전체 타입 정보를 유지할 수 있습니다.
+    BeanOutputConverter<List<Hotel>> beanOutputConverter = new BeanOutputConverter<>(
+        new ParameterizedTypeReference<List<Hotel>>() {});
+
+    // 2. 프롬프트 템플릿을 생성합니다. {format} 플레이스홀더를 포함합니다.
+    PromptTemplate promptTemplate = new PromptTemplate("""
+        다음 도시들에서 유명한 호텔 3개를 출력하세요.
+        {cities}
+        {format}
+        """);
+
+    // 3. converter.getFormat()을 호출하여 List<Hotel> 구조에 맞는 JSON 스키마 정보를 가져와 프롬프트를 완성합니다.
+    Prompt prompt = promptTemplate.create(Map.of(
+        "cities", cities, 
+        "format", beanOutputConverter.getFormat()));
+
+    // 4. AI를 호출하여 순수한 JSON 텍스트 응답을 받습니다.
+    String json = chatClient.prompt(prompt)
+        .call()
+        .content();
+    log.info("AI 원본 응답 (JSON): {}", json);
+
+    // 5. 변환기의 convert() 메소드를 직접 호출하여, 응답 JSON을 List<Hotel> 객체로 변환합니다.
+    List<Hotel> hotelList = beanOutputConverter.convert(json);
+    return hotelList;
+  }
+  
+  /**
+   * 고수준(High-Level) API와 ParameterizedTypeReference를 사용하여 AI 응답을 List<Hotel>으로 변환합니다.
+   * 제네릭 컬렉션 타입을 변환하는 가장 간결하고 권장되는 방식입니다.
+   *
+   * @param cities 도시 목록 문자열
+   * @return 각 도시의 호텔 정보를 담은 Hotel 객체의 리스트
+   */
+  public List<Hotel> genericBeanOutputConverterHighLevel(String cities) {
+    // .entity() 메소드에 ParameterizedTypeReference 인스턴스를 전달합니다.
+    // 이를 통해 Spring AI 프레임워크가 내부적으로 제네릭 타입을 완벽하게 인지하고,
+    // 저수준 API의 모든 복잡한 과정을 자동으로 처리해 줍니다.
+    List<Hotel> hotelList = chatClient.prompt().user("""
+        다음 도시들에서 유명한 호텔 3개를 출력하세요.
+        %s
+        """.formatted(cities))
+        .call()
+        .entity(new ParameterizedTypeReference<List<Hotel>>() {});
+    return hotelList;
+  }
+}
+
+```
+
+
+controller/AIControllerParameterizedTypeReference.java
+```java
+/**
+ * AiServiceParameterizedTypeReference 서비스를 호출하고, 그 결과를 API 엔드포인트를 통해
+ * 외부에 제공하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerParameterizedTypeReference {
+  // ##### 필드 #####
+  @Autowired
+  private AiServiceParameterizedTypeReference aiService; // ParameterizedTypeReference 로직을 처리하는 서비스
+
+  //##### 메소드 #####
+  /**
+   * '/ai/generic-bean-output-converter' 경로로 들어오는 POST 요청을 처리합니다.
+   * 여러 도시 이름을 받아 각 도시의 호텔 정보를 AI로부터 추천받아 List<Hotel> 형태로 반환합니다.
+   *
+   * @param cities 'cities'라는 이름의 요청 파라미터 (사용자가 입력한 도시 이름들)
+   * @return 여러 호텔 정보를 담은 Hotel 객체의 리스트(List<Hotel>). Spring MVC에 의해 JSON 배열로 자동 변환되어 응답됩니다.
+   */
+  @PostMapping(
+    value = "/generic-bean-output-converter",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.APPLICATION_JSON_VALUE  // 이 엔드포인트는 JSON 형식의 데이터를 생성합니다.
+  )
+  public List<Hotel> genericBeanOutputConverter(@RequestParam("cities") String cities) {
+    // 서비스의 저수준 또는 고수준 API 메소드를 선택하여 호출할 수 있습니다.
+    // 아래 두 줄 중 하나를 선택하고 다른 하나를 주석 처리하여 제네릭 타입을 다루는
+    // 두 가지 방식의 구현을 쉽게 전환하며 테스트할 수 있습니다.
+    //List<Hotel> hotelList = aiService.genericBeanOutputConverterLowLevel(cities);
+    List<Hotel> hotelList = aiService.genericBeanOutputConverterHighLevel(cities);
+    return hotelList;
+  }
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/generic-bean-output-converter 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-3.png)
+
+---
+
