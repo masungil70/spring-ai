@@ -39,6 +39,16 @@
             "projectName": "ch04-structured-output",
             "args": "",
             "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-DemoApplication<ch05-voice-chat>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.example.demo.DemoApplication",
+            "projectName": "ch05-voice-chat",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
         }
     ]
 }
