@@ -888,9 +888,121 @@ public class AiControllerMapOutputConverter {
 }
 
 ```
+
 ### 브라우저에서 실행 하여 테스트 해보기
 http://localhost:8080/map-output-converter 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
 
 ![alt text](image-4.png)
 
+---
+
+## 4.6 시스템 메시지와 함게 사용
+LLM에게 지시할 내용은 일반적으로 시스템 메시지에 포함시키지만, entity()는 사용자 메시지에 출력 형식을 포함시킵니다. LLM의 출력형식 지침을 두 메시지에 모두 포함시킬 수 있는데, 서술식 설명과 예시는 시스템 메시지에서 1차 지침으로 주고, entity()로 구체적인 타입 정보를 제공해서 좀 더 정확한 JSON을 출력하도록 2차 지침을 주면 구조화된 출력 기능은 더욱 강력해집니다. 
+
+
+dto/ReviewClassification.java
+```java
+@Data
+public class ReviewClassification {
+  // ##### 열거 타입 선언 #####
+  public enum Sentiment {
+    POSITIVE, NEUTRAL, NEGATIVE
+  }
+
+  // ##### 필드 선언 #####
+  private String review;
+  private Sentiment classification;
+}
+
+```
+
+
+service/AiServiceSystemMessage.java
+```java
+/**
+ * System 메시지를 사용하여 AI의 역할이나 행동 지침을 설정하는 방법을 보여주는 서비스 클래스입니다.
+ * AI에게 "너는 이제부터 리뷰 분석 전문가야" 와 같이 역할을 부여하여 더 일관되고 정확한 응답을 유도합니다.
+ */
+@Service
+@Slf4j
+public class AiServiceSystemMessage {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 클라이언트
+
+  // ##### 생성자 #####
+  public AiServiceSystemMessage(ChatClient.Builder chatClientBuilder) {
+    this.chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+  /**
+   * System 메시지를 활용하여 주어진 영화 리뷰를 [긍정, 중립, 부정]으로 분류합니다.
+   *
+   * @param review 사용자가 입력한 영화 리뷰 텍스트
+   * @return 분류 결과와 추가 정보를 담은 ReviewClassification 객체
+   */
+  public ReviewClassification classifyReview(String review) {
+    ReviewClassification reviewClassification = chatClient.prompt()
+        // 1. System 메시지 설정: AI에게 전체 대화의 맥락이나 역할을 부여합니다.
+        //    여기서는 "리뷰를 분류하고 JSON으로 반환하라"는 기본 지침을 설정하여,
+        //    AI가 '리뷰 분류기'로서 행동하도록 만듭니다.
+        .system("""
+            영화 리뷰를 [POSITIVE, NEUTRAL, NEGATIVE] 중에서 하나로 분류하고,
+            유효한 JSON을 반환하세요.
+         """)
+        // 2. User 메시지 설정: AI가 처리해야 할 실제 데이터(사용자 입력)를 전달합니다.
+        .user("%s".formatted(review))
+        // 3. 옵션 설정: AI의 응답 방식을 제어합니다.
+        //    - temperature를 0.0으로 설정: AI의 응답에서 무작위성을 제거하여, 동일한 입력에 대해 항상 동일한 결과를 내도록 합니다.
+        //      분류(Classification)와 같이 일관성이 중요한 작업에 필수적인 옵션입니다.
+        .options(ChatOptions.builder().temperature(0.0).build())
+        // 4. AI 호출 및 고수준 출력 변환
+        //    .entity()를 사용하여 AI의 JSON 응답을 ReviewClassification 객체로 자동 변환합니다.
+        .call()
+        .entity(ReviewClassification.class);
+    return reviewClassification;
+  }
+}
+```
+
+controller/AiControllerSystemMessage.java
+```java
+/**
+ * AiServiceSystemMessage 서비스를 호출하고, 그 결과를 API 엔드포인트를 통해
+ * 외부에 제공하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerSystemMessage {
+  // ##### 필드 #####
+  @Autowired
+  private AiServiceSystemMessage aiService; // System 메시지 로직을 처리하는 서비스
+  
+  // ##### 메소드 #####
+  /**
+   * '/ai/system-message' 경로로 들어오는 POST 요청을 처리합니다.
+   * 영화 리뷰 텍스트를 받아 해당 리뷰에 대한 분류 결과를 담은 객체를 JSON 형태로 반환합니다.
+   *
+   * @param review 'review'라는 이름의 요청 파라미터 (사용자가 입력한 리뷰 텍스트)
+   * @return 리뷰 분류 정보를 담은 ReviewClassification 객체. Spring MVC에 의해 JSON 객체로 자동 변환되어 응답됩니다.
+   */
+  @PostMapping(
+    value = "/system-message",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.APPLICATION_JSON_VALUE   // 이 엔드포인트는 JSON 형식의 데이터를 생성합니다.
+  )
+  public ReviewClassification classifyReview(@RequestParam("review") String review) {
+    // AI 서비스를 호출하여 리뷰에 대한 분류 결과를 얻습니다.
+    ReviewClassification reviewClassification = aiService.classifyReview(review);
+    return reviewClassification;
+  }
+}
+
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/system-message 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-5.png)
 ---

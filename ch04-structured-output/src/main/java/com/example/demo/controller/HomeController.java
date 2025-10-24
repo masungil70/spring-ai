@@ -32,4 +32,9 @@ public class HomeController {
         return "map-output-converter";
     }
 
+    @GetMapping("/system-message")
+    public String systemMessage() {
+        return "system-message";
+    }  
+
 }
