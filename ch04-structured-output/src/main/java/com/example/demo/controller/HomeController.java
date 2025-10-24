@@ -12,4 +12,9 @@ public class HomeController {
         return "home";
     }
 
+    @GetMapping("/list-output-converter")
+    public String listOutputConverter() {
+        return "list-output-converter";
+    }    
+
 }
