@@ -27,4 +27,9 @@ public class HomeController {
         return "generic-bean-output-converter";
     }   
 
+    @GetMapping("/map-output-converter")
+    public String mapOutputConverter() {
+        return "map-output-converter";
+    }
+
 }

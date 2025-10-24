@@ -776,3 +776,121 @@ http://localhost:8080/generic-bean-output-converter 을 실행하고 제출을 �
 
 ---
 
+## 4.5 Map으로 변환(MapOutputConverter)
+
+LLM의 출력을 Map<String, Object>로 변환하고 싶다면, MapOutputConverter를 사용할 수 있습니다. 이 변환기는 LLM이 JSON 출력을 할 수 있도록 지침을 생성하고, LLM의 출력을 Map<String, Object>로 변환합니다.
+
+service/AiServiceMapOutputConverter.java
+```java
+/**
+ * AI의 응답을 Map<String, Object> 형태로 변환하는 MapOutputConverter의 사용법을 보여주는 서비스 클래스입니다.
+ * 이 변환기는 미리 정해진 DTO(Java Bean) 없이, 유연한 키-값 형태의 데이터를 받아야 할 때 유용합니다.
+ */
+@Service
+@Slf4j
+public class AiServiceMapOutputConverter {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 클라이언트
+
+  // ##### 생성자 #####
+  public AiServiceMapOutputConverter(ChatClient.Builder chatClientBuilder) {
+    this.chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+
+  /**
+   * 저수준(Low-Level) API를 사용하여 AI의 응답을 Map<String, Object>으로 변환합니다.
+   * 개발자가 변환의 모든 단계를 직접 제어하며, 디버깅이나 복잡한 프롬프트 구성에 유리합니다.
+   *
+   * @param hotel 호텔 이름
+   * @return 해당 호텔의 정보를 담은 Map 객체
+   */
+  public Map<String, Object> mapOutputConverterLowLevel(String hotel) {
+    // 1. MapOutputConverter를 생성합니다.
+    MapOutputConverter mapOutputConverter = new MapOutputConverter();
+
+    // 2. 프롬프트 템플릿에 출력 형식을 지정하는 {format} 플레이스홀더를 직접 포함시킵니다.
+    PromptTemplate promptTemplate = new PromptTemplate(
+        "호텔 {hotel}에 대해 정보를 알려주세요 {format}");
+
+    // 3. converter.getFormat()을 호출하여 AI에게 JSON 객체로 응답하라는 지시사항을 가져와 프롬프트를 완성합니다.
+    Prompt prompt = promptTemplate.create(Map.of(
+        "hotel", hotel,
+        "format", mapOutputConverter.getFormat()));
+
+    // 4. AI를 호출하여 순수한 JSON 텍스트 응답을 받습니다.
+    String json = chatClient.prompt(prompt)
+        .call()
+        .content();
+    log.info("AI 원본 응답 (JSON): {}", json);
+
+    // 5. 변환기의 convert() 메소드를 직접 호출하여, 응답 JSON을 Map<String, Object> 객체로 변환합니다.
+    Map<String, Object> hotelInfo = mapOutputConverter.convert(json);
+    return hotelInfo;
+  }
+  
+  /**
+   * 고수준(High-Level) API를 사용하여 AI의 응답을 Map<String, Object>으로 변환합니다.
+   * 코드가 매우 간결하며, 대부분의 일반적인 경우에 권장되는 방식입니다.
+   *
+   * @param hotel 호텔 이름
+   * @return 해당 호텔의 정보를 담은 Map 객체
+   */
+  public Map<String, Object> mapOutputConverterHighLevel(String hotel) {
+    // .entity() 메소드에 MapOutputConverter 인스턴스를 전달하는 것만으로,
+    // 저수준 API의 모든 과정(프롬프트 보강, AI 호출, 응답 파싱)이 자동으로 처리됩니다.
+    Map<String, Object> hotelInfo = chatClient.prompt()
+        .user("호텔 %s에 대해 정보를 알려주세요".formatted(hotel))
+        .call()
+        .entity(new MapOutputConverter());
+    return hotelInfo;
+  }
+
+}
+
+```
+
+controller/AiControllerMapOutputConverter.java
+```java
+/**
+ * AiServiceMapOutputConverter 서비스를 호출하고, 그 결과를 API 엔드포인트를 통해
+ * 외부에 제공하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerMapOutputConverter {
+  // ##### 필드 #####
+  @Autowired
+  private AiServiceMapOutputConverter aiService; // MapOutputConverter 로직을 처리하는 서비스
+  
+  // ##### 메소드 #####
+  /**
+   * '/ai/map-output-converter' 경로로 들어오는 POST 요청을 처리합니다.
+   * 호텔 이름을 받아 해당 호텔의 정보를 AI로부터 추천받아 Map<String, Object> 형태로 반환합니다.
+   *
+   * @param hotel 'hotel'이라는 이름의 요청 파라미터 (사용자가 입력한 호텔 이름)
+   * @return 호텔 정보를 담은 Map 객체. Spring MVC에 의해 JSON 객체로 자동 변환되어 응답됩니다.
+   */
+  @PostMapping(
+    value = "/map-output-converter",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.APPLICATION_JSON_VALUE // 이 엔드포인트는 JSON 형식의 데이터를 생성합니다.
+  )
+  public Map<String, Object> mapOutputConverter(@RequestParam("hotel") String hotel) {
+    // 서비스의 저수준 또는 고수준 API 메소드를 선택하여 호출할 수 있습니다.
+    // 아래 두 줄 중 하나를 선택하고 다른 하나를 주석 처리하여 테스트하려는 방식을 쉽게 전환할 수 있습니다.
+    Map<String, Object> hotelInfo = aiService.mapOutputConverterLowLevel(hotel);
+    // Map<String, Object> hotelInfo = aiService.mapOutputConverterHighLevel(hotel);
+    return hotelInfo;
+  }
+}
+
+```
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/map-output-converter 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-4.png)
+
+---
