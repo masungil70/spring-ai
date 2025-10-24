@@ -478,6 +478,7 @@ controller/AiControllerListOutputConverter.java
 ```java
 ...
 public class AiControllerListOutputConverter {
+  ...
   public List<String> listOutputConverter(@RequestParam("city") String city) {
     // 서비스의 저수준 또는 고수준 API 메소드를 선택하여 호출할 수 있습니다.
     // 아래 두 줄 중 하나를 선택하고 다른 하나를 주석 처리하여 테스트하려는 방식을 쉽게 전환할 수 있습니다.
@@ -493,3 +494,150 @@ public class AiControllerListOutputConverter {
 ![alt text](image-1.png)
 
 
+## 4.3 T로 변환(BeanOutputConverter)
+
+LLM의 출력을 T 객체로 변화하고 싶다면, BeanOutputConverter를 사용할 수 있습니다. T는 변환할 자바 타입입니다. 이 변환기는 LLM이 JSON 출력을 할 수 있도록 지침을 생성하고, LLM의 출력을 T 객체로 변환합니다.
+
+dto/Hotel.java
+```java
+@Data
+public class Hotel {
+  // 도시 이름
+  private String city;
+  // 호텔 이름 목록
+  private List<String> names;
+}
+```
+
+service/AiServiceBeanOutputConverter.java
+```java
+/**
+ * AI의 응답을 특정 자바 객체(POJO)로 변환하는 BeanOutputConverter의 사용법을 보여주는 서비스 클래스입니다.
+ * 동일한 목표를 고수준(High-Level) API와 저수준(Low-Level) API 두 가지 방식으로 구현하여 비교합니다.
+ */
+@Service
+@Slf4j
+public class AiServiceBeanOutputConverter {
+  // ##### 필드 #####
+  private ChatClient chatClient; // AI 모델과 상호작용하기 위한 클라이언트
+
+  // ##### 생성자 #####
+  public AiServiceBeanOutputConverter(ChatClient.Builder chatClientBuilder) {
+    this.chatClient = chatClientBuilder.build();
+  }
+
+  // ##### 메소드 #####
+
+  /**
+   * 저수준(Low-Level) API를 사용하여 AI의 응답을 'Hotel' 객체로 변환합니다.
+   * 개발자가 변환의 모든 단계를 직접 제어하며, 디버깅이나 복잡한 프롬프트 구성에 유리합니다.
+   *
+   * @param city 도시 이름
+   * @return AI가 생성한 정보를 담은 Hotel 객체
+   */
+  public Hotel beanOutputConverterLowLevel(String city) {
+    // 1. BeanOutputConverter를 생성하며, 변환할 대상 클래스(Hotel.class)를 명시합니다.
+    BeanOutputConverter<Hotel> beanOutputConverter = new BeanOutputConverter<>(Hotel.class);
+
+    // 2. 프롬프트 템플릿에 출력 형식을 지정하는 {format} 플레이스홀더를 직접 포함시킵니다.
+    PromptTemplate promptTemplate = PromptTemplate.builder()
+        .template("{city}에서 유명한 호텔 한 곳을 추천해 주세요. {format}")
+        .build();
+
+    // 3. converter.getFormat()을 호출하여 Hotel 클래스 구조에 맞는 JSON 스키마 정보를 가져와 프롬프트를 완성합니다.
+    Prompt prompt = promptTemplate.create(Map.of(
+        "city", city,
+        "format", beanOutputConverter.getFormat()));
+
+    // 4. AI를 호출하여 순수한 JSON 텍스트 응답을 받습니다.
+    String json = chatClient.prompt(prompt)
+        .call()
+        .content();
+    log.info("AI 원본 응답 (JSON): {}", json);
+
+    // 5. 변환기의 convert() 메소드를 직접 호출하여, 응답 JSON을 Hotel 객체로 변환합니다.
+    Hotel hotel = beanOutputConverter.convert(json);
+    return hotel;
+  }
+  
+  /**
+   * 고수준(High-Level) API를 사용하여 AI의 응답을 'Hotel' 객체로 변환합니다.
+   * 코드가 매우 간결하며, 자바 객체로 변환하는 대부분의 경우에 권장되는 방식입니다.
+   *
+   * @param city 도시 이름
+   * @return AI가 생성한 정보를 담은 Hotel 객체
+   */
+  public Hotel beanOutputConverterHighLevel(String city) {
+    // .entity() 메소드에 변환할 클래스(Hotel.class)를 직접 전달합니다.
+    // 이렇게 하면 Spring AI가 내부적으로 BeanOutputConverter<Hotel>를 생성하고,
+    // 저수준 API의 1~5번 과정을 모두 자동으로 처리해 줍니다.
+    Hotel hotel = chatClient.prompt()
+        .user("%s에서 유명한 호텔 한 곳을 추천해 주세요.".formatted(city))
+        .call()
+        .entity(Hotel.class);
+    return hotel;
+  }
+}
+```
+
+controller/AiControllerBeanOutputConverter.java
+```java
+/**
+ * AiServiceBeanOutputConverter 서비스를 호출하고, 그 결과를 API 엔드포인트를 통해
+ * 외부에 제공하는 컨트롤러 클래스입니다.
+ */
+@RestController
+@RequestMapping("/ai")
+@Slf4j
+public class AiControllerBeanOutputConverter {
+  // ##### 필드 #####
+  @Autowired
+  private AiServiceBeanOutputConverter aiService; // BeanOutputConverter 로직을 처리하는 서비스
+  
+  // ##### 메소드 #####
+  /**
+   * '/ai/bean-output-converter' 경로로 들어오는 POST 요청을 처리합니다.
+   * 도시 이름을 받아 해당 도시의 호텔 정보를 AI로부터 추천받아 Hotel 객체 형태로 반환합니다.
+   *
+   * @param city 'city'라는 이름의 요청 파라미터 (사용자가 입력한 도시 이름)
+   * @return 추천 호텔 정보를 담은 Hotel 객체. Spring MVC에 의해 JSON 객체로 자동 변환되어 응답됩니다.
+   */
+  @PostMapping(
+    value = "/bean-output-converter",
+    consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, // 이 엔드포인트는 form-urlencoded 형식의 데이터를 소비합니다.
+    produces = MediaType.APPLICATION_JSON_VALUE   // 이 엔드포인트는 JSON 형식의 데이터를 생성합니다.
+  )
+  public Hotel beanOutputConverter(@RequestParam("city") String city) {
+    // 서비스의 저수준 또는 고수준 API 메소드를 선택하여 호출할 수 있습니다.
+    // 아래 두 줄 중 하나를 선택하고 다른 하나를 주석 처리하여 테스트하려는 방식을 쉽게 전환할 수 있습니다.
+    Hotel hotel = aiService.beanOutputConverterLowLevel(city);
+    //Hotel hotel = aiService.beanOutputConverterHighLevel(city);
+    return hotel;
+  }
+}
+```
+
+### 브라우저에서 실행 하여 테스트 해보기
+http://localhost:8080/bean-output-converter 을 실행하고 제출을 클릭하면 아래 그림과 같이 출력됩니다 
+
+![alt text](image-2.png)
+
+### 저수준에서 고수준으로 변환하고 실행을 해보세요 
+controller/AiControllerListOutputConverter.java
+```java
+...
+public class AiControllerBeanOutputConverter {
+...
+  public Hotel beanOutputConverter(@RequestParam("city") String city) {
+    // 서비스의 저수준 또는 고수준 API 메소드를 선택하여 호출할 수 있습니다.
+    // 아래 두 줄 중 하나를 선택하고 다른 하나를 주석 처리하여 테스트하려는 방식을 쉽게 전환할 수 있습니다.
+    //Hotel hotel = aiService.beanOutputConverterLowLevel(city);
+
+	//고수준 호출로 변경합니다 
+    Hotel hotel = aiService.beanOutputConverterHighLevel(city);
+    return hotel;
+  }
+}
+```
+실행 결과 
+![alt text](image-2.png)

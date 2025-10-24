@@ -17,4 +17,9 @@ public class HomeController {
         return "list-output-converter";
     }    
 
+    @GetMapping("/bean-output-converter")
+    public String beanOutputConverter() {
+        return "bean-output-converter";
+    }  
+
 }
